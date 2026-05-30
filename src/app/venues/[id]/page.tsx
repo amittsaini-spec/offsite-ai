@@ -6,6 +6,7 @@ import {
   parseArray,
   parseObj,
   parsePricingOptions,
+  parseDateArray,
   embedFromUrl,
   eventsForType,
   isIndoor,
@@ -29,7 +30,13 @@ export default async function VenueDetail({
 
   const v = await prisma.venue.findUnique({
     where: { id },
-    include: { hotel: true },
+    include: {
+      hotel: true,
+      bookings: {
+        where: { status: "CONFIRMED" },
+        select: { eventDate: true },
+      },
+    },
   });
   if (!v) notFound();
 
@@ -40,6 +47,17 @@ export default async function VenueDetail({
   const pricingOptions = parsePricingOptions(v!.pricingOptions);
   const photos = parseArray(v!.photos);
   const floorPlans = parseArray(v!.floorPlans);
+  // Unselectable dates on the public calendar: admin blackouts + dates of
+  // any CONFIRMED booking on this venue (prevents double-booking).
+  const blackoutDates = parseDateArray(v!.blackoutDates);
+  const confirmedDates = Array.from(
+    new Set(
+      v!.bookings
+        .map((b) => b.eventDate)
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+    ),
+  );
+  const unavailableDates = Array.from(new Set([...blackoutDates, ...confirmedDates]));
   const grad = gradFor(v!.type);
   const embed = embedFromUrl(v!.videoUrl);
   const shortestHours = pricingOptions.length
@@ -284,6 +302,7 @@ export default async function VenueDetail({
                 pricingOptions={pricingOptions}
                 depositPct={v!.depositPct}
                 rating="New"
+                unavailableDates={unavailableDates}
               />
             )}
           </div>

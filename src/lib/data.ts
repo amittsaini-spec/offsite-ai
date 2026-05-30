@@ -148,6 +148,37 @@ export function embedFromUrl(url: string): string | null {
 
 export const fmt = (n: number) => "$" + Math.round(n).toLocaleString();
 
+// ─── Date helpers (timezone-safe, YYYY-MM-DD strings) ───
+// We store calendar dates as plain YYYY-MM-DD strings to avoid UTC drift —
+// `new Date("2026-06-15")` parses as UTC midnight which can shift a day in
+// negative timezones. These helpers always work in local time.
+export function toYMD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+export function fromYMD(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+export function parseDateArray(s: string): string[] {
+  try {
+    const v = JSON.parse(s);
+    if (!Array.isArray(v)) return [];
+    return Array.from(
+      new Set(
+        v
+          .map((x) => String(x ?? "").trim())
+          .filter((x) => YMD_RE.test(x)),
+      ),
+    ).sort();
+  } catch {
+    return [];
+  }
+}
+
 // JSON-in-text helpers (keeps the schema portable to Postgres later)
 export function parseArray(s: string): string[] {
   try {

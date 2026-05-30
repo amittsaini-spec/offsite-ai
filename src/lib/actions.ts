@@ -42,6 +42,24 @@ function urlArray(fd: FormData, key: string): string[] {
     return [];
   }
 }
+// Strict YYYY-MM-DD-array parser for the blackout calendar.
+function dateArray(fd: FormData, key: string): string[] {
+  const raw = (fd.get(key) ?? "").toString().trim();
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    if (!Array.isArray(v)) return [];
+    return Array.from(
+      new Set(
+        v
+          .map((x) => String(x ?? "").trim())
+          .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)),
+      ),
+    ).sort();
+  } catch {
+    return [];
+  }
+}
 function lines(fd: FormData, key: string) {
   return str(fd, key)
     .split("\n")
@@ -218,6 +236,7 @@ export async function createVenueAction(formData: FormData) {
       videoUrl: str(formData, "videoUrl"),
       tourUrl: str(formData, "tourUrl"),
       floorPlans: JSON.stringify(urlArray(formData, "floorPlans")),
+      blackoutDates: JSON.stringify(dateArray(formData, "blackoutDates")),
     },
   });
   revalidatePath("/admin");
@@ -268,6 +287,7 @@ export async function updateVenueAction(formData: FormData) {
       videoUrl: str(formData, "videoUrl"),
       tourUrl: str(formData, "tourUrl"),
       floorPlans: JSON.stringify(urlArray(formData, "floorPlans")),
+      blackoutDates: JSON.stringify(dateArray(formData, "blackoutDates")),
     },
   });
 
@@ -352,6 +372,14 @@ export async function setBookingStatusAction(formData: FormData) {
   if (!user) redirect("/login");
   const id = str(formData, "id");
   const status = str(formData, "status");
-  await prisma.bookingRequest.update({ where: { id }, data: { status } });
+  const updated = await prisma.bookingRequest.update({
+    where: { id },
+    data: { status },
+    select: { venueId: true },
+  });
+  // Status flips affect public availability (CONFIRMED dates become unselectable),
+  // so refresh the venue's public page and the admin views too.
   revalidatePath("/admin/bookings");
+  revalidatePath(`/venues/${updated.venueId}`);
+  revalidatePath("/admin");
 }

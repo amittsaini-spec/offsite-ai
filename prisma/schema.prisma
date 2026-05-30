@@ -77,6 +77,9 @@ model Venue {
   videoUrl       String @default("")    // Vercel Blob URL or YouTube/Vimeo embed URL
   tourUrl        String @default("")    // Matterport / 360° URL
   floorPlans     String @default("[]")  // JSON array of URLs
+
+  // Availability — admin-set blocked dates (YYYY-MM-DD), excluding CONFIRMED bookings
+  blackoutDates  String @default("[]")
   createdAt   DateTime @default(now())
   bookings    BookingRequest[]
 }

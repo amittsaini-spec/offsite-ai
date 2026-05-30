@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { VENUE_TYPES, parseArray, parseObj, parsePricingOptions } from "@/lib/data";
+import { VENUE_TYPES, parseArray, parseObj, parsePricingOptions, parseDateArray } from "@/lib/data";
 import { updateVenueAction, deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 import PricingOptionsEditor from "@/app/admin/_components/PricingOptionsEditor";
 import VenueMediaEditor from "@/app/admin/_components/VenueMediaEditor";
+import BlackoutCalendar from "@/app/admin/_components/BlackoutCalendar";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,13 @@ export default async function EditVenue({
   const { id } = await params;
   const venue = await prisma.venue.findUnique({
     where: { id },
-    include: { hotel: true },
+    include: {
+      hotel: true,
+      bookings: {
+        where: { status: "CONFIRMED" },
+        select: { eventDate: true },
+      },
+    },
   });
   if (!venue) notFound();
 
@@ -28,6 +35,14 @@ export default async function EditVenue({
   const pricingOptions = parsePricingOptions(venue!.pricingOptions);
   const photos = parseArray(venue!.photos);
   const floorPlans = parseArray(venue!.floorPlans);
+  const blackouts = parseDateArray(venue!.blackoutDates);
+  const confirmedDates = Array.from(
+    new Set(
+      venue!.bookings
+        .map((b) => b.eventDate)
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+    ),
+  );
 
   return (
     <>
@@ -139,6 +154,15 @@ export default async function EditVenue({
           Define one or more booking options. Guests pick one at checkout.
         </div>
         <PricingOptionsEditor initial={pricingOptions} />
+
+        <div className="fsec" style={{ marginTop: 28 }}>Availability</div>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+          Click a date to toggle a blackout. Confirmed bookings (in emerald) are read-only.
+        </div>
+        <BlackoutCalendar
+          initialBlackouts={blackouts}
+          confirmedDates={confirmedDates}
+        />
 
         <div className="fsec" style={{ marginTop: 28 }}>Photos</div>
         <VenueMediaEditor
