@@ -424,6 +424,107 @@ export async function createBookingAction(formData: FormData) {
   redirect(`/venues/${venueId}?booked=1`);
 }
 
+/* ---------- HOME-PAGE CMS ---------- */
+
+const ALLOWED_HERO_MEDIA_TYPES = new Set(["none", "image", "video", "slideshow"]);
+
+// Partial update of the singleton SiteSettings row. Every field is
+// optional in the form — only what's posted gets written, defaults left
+// in place.
+export async function updateSiteSettingsAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const mediaTypeRaw = str(formData, "heroMediaType");
+  const heroMediaType = ALLOWED_HERO_MEDIA_TYPES.has(mediaTypeRaw)
+    ? mediaTypeRaw
+    : "none";
+
+  // Media URLs come in as a hidden JSON input the picker keeps in sync.
+  const heroMedia = JSON.stringify(urlArray(formData, "heroMedia"));
+
+  // Search placeholders are a 4-field object posted as discrete inputs.
+  const searchPlaceholders = JSON.stringify({
+    where: str(formData, "ph_where"),
+    event: str(formData, "ph_event"),
+    date: str(formData, "ph_date"),
+    guests: str(formData, "ph_guests"),
+  });
+
+  await prisma.siteSettings.upsert({
+    where: { id: "home" },
+    update: {
+      heroEyebrow: str(formData, "heroEyebrow"),
+      heroHeadline: str(formData, "heroHeadline"),
+      heroSubhead: str(formData, "heroSubhead"),
+      heroMediaType,
+      heroMedia,
+      heroVideoEmbed: str(formData, "heroVideoEmbed"),
+      searchPlaceholders,
+    },
+    create: {
+      id: "home",
+      heroEyebrow: str(formData, "heroEyebrow"),
+      heroHeadline: str(formData, "heroHeadline"),
+      heroSubhead: str(formData, "heroSubhead"),
+      heroMediaType,
+      heroMedia,
+      heroVideoEmbed: str(formData, "heroVideoEmbed"),
+      searchPlaceholders,
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/homepage");
+  redirect("/admin/homepage?saved=hero");
+}
+
+// Replace-all save for the Shop by Moment cards. The form posts a single
+// JSON blob from the client editor; we delete the existing rows and
+// recreate inside a transaction so the table can never end up partial.
+export async function saveHomeCollectionsAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const raw = (formData.get("collections") ?? "").toString();
+  let parsed: unknown = [];
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    redirect("/admin/homepage?error=collections-bad-json");
+  }
+  if (!Array.isArray(parsed)) {
+    redirect("/admin/homepage?error=collections-not-array");
+  }
+
+  const rows = (parsed as unknown[])
+    .map((r, i) => {
+      const o = (r ?? {}) as Record<string, unknown>;
+      const linkType = String(o.linkType ?? "type");
+      return {
+        title: String(o.title ?? "").trim(),
+        subtitle: String(o.subtitle ?? "").trim(),
+        imageUrl: String(o.imageUrl ?? "").trim(),
+        linkType: linkType === "tag" ? "tag" : "type",
+        linkValue: String(o.linkValue ?? "").trim(),
+        sortOrder: i,
+      };
+    })
+    // Drop completely empty rows so a stray "+ Add card" doesn't persist.
+    .filter((r) => r.title || r.subtitle || r.imageUrl);
+
+  await prisma.$transaction([
+    prisma.homeCollection.deleteMany({}),
+    prisma.homeCollection.createMany({ data: rows }),
+  ]);
+
+  revalidatePath("/");
+  revalidatePath("/admin/homepage");
+  redirect("/admin/homepage?saved=collections");
+}
+
+/* ---------- bookings ---------- */
+
 export async function setBookingStatusAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

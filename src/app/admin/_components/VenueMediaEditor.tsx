@@ -1,47 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { upload } from "@vercel/blob/client";
-
-// Vercel Blob requires the project to have BLOB_READ_WRITE_TOKEN configured.
-// We can't read that on the client directly — instead we look at a public
-// flag set at build time so the UI knows whether to expose the upload UI.
-const BLOB_READY = process.env.NEXT_PUBLIC_BLOB_READY === "true";
-
-// Formats we route through the server-side transcoder so the stored blob is
-// always a JPEG that displays in every browser.
-const CONVERT_RE = /^image\/(heic|heif|avif)$/i;
-const CONVERT_EXT = /\.(heic|heif|avif)$/i;
-
-// One uploader for both photo + floor-plan grids. HEIC/HEIF/AVIF take the
-// server-proxied transcode path; everything else uses the existing
-// client-direct Vercel Blob flow.
-async function uploadOne(file: File, pathPrefix: string): Promise<string> {
-  const needsConvert =
-    CONVERT_RE.test(file.type || "") || CONVERT_EXT.test(file.name);
-
-  if (needsConvert) {
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("pathPrefix", pathPrefix);
-    const res = await fetch("/api/transcode-upload", {
-      method: "POST",
-      body: fd,
-    });
-    if (!res.ok) {
-      const e = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(e.error || "Transcode upload failed");
-    }
-    const json = (await res.json()) as { url: string };
-    return json.url;
-  }
-
-  const blob = await upload(`${pathPrefix}/${Date.now()}-${file.name}`, file, {
-    access: "public",
-    handleUploadUrl: "/api/upload",
-  });
-  return blob.url;
-}
+import { uploadOne, BLOB_READY } from "@/app/_components/blobUpload";
 
 type VideoMode = "upload" | "embed";
 
@@ -345,11 +305,8 @@ function VideoUpload({
     setBusy(true);
     setErr(null);
     try {
-      const blob = await upload(`venues/video/${Date.now()}-${file.name}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
-      setVideoUrl(blob.url);
+      const url = await uploadOne(file, "venues/video");
+      setVideoUrl(url);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {

@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/revenue", label: "Revenue" },
   { href: "/admin/users", label: "Team" },
+  { href: "/admin/homepage", label: "Homepage" },
 ];
 
 export default function Sidebar({
