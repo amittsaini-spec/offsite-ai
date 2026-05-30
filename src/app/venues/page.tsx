@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { EVENT_TYPES, EVENT_TYPE_MATCH } from "@/lib/data";
+import { EVENT_TYPES, EVENT_TYPE_MATCH, fromPrice } from "@/lib/data";
 import SiteNav from "../_components/SiteNav";
 import VenueCard from "../_components/VenueCard";
 
@@ -41,8 +41,14 @@ export default async function Browse({
   if (tag !== "All")
     venues = venues.filter((v) => v.tags.includes(tag) || v.type === tag);
 
-  if (sort === "Price ↑") venues.sort((a, b) => a.basePrice - b.basePrice);
-  if (sort === "Price ↓") venues.sort((a, b) => b.basePrice - a.basePrice);
+  if (sort === "Price ↑")
+    venues.sort(
+      (a, b) => fromPrice(a.pricingOptions, a.basePrice) - fromPrice(b.pricingOptions, b.basePrice),
+    );
+  if (sort === "Price ↓")
+    venues.sort(
+      (a, b) => fromPrice(b.pricingOptions, b.basePrice) - fromPrice(a.pricingOptions, a.basePrice),
+    );
 
   const base = (over: Record<string, string>) => {
     const p = new URLSearchParams();

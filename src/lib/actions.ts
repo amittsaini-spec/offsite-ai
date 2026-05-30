@@ -2,7 +2,7 @@
 
 import { prisma } from "./db";
 import { createSession, destroySession, getCurrentUser } from "./auth";
-import { quote, TIERS } from "./data";
+import { quote, parsePricingOptions } from "./data";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -102,6 +102,14 @@ export async function deleteHotelAction(formData: FormData) {
   const id = str(formData, "id");
   if (!id) redirect("/admin");
 
+  // Guard: refuse if any venue under this hotel has a CONFIRMED booking.
+  const confirmedCount = await prisma.bookingRequest.count({
+    where: { status: "CONFIRMED", venue: { hotelId: id } },
+  });
+  if (confirmedCount > 0) {
+    redirect(`/admin/hotels/${id}?error=hotel-has-confirmed-bookings`);
+  }
+
   // Capture venue ids before cascading delete so we can revalidate their public pages.
   const venues = await prisma.venue.findMany({
     where: { hotelId: id },
@@ -136,6 +144,8 @@ export async function createVenueAction(formData: FormData) {
     min: str(formData, "rule_min"),
   };
 
+  const pricingOptions = parsePricingOptions(str(formData, "pricingOptions"));
+
   await prisma.venue.create({
     data: {
       hotelId,
@@ -145,13 +155,13 @@ export async function createVenueAction(formData: FormData) {
       sqft: int(formData, "sqft"),
       seated: int(formData, "seated"),
       standing: int(formData, "standing"),
-      basePrice: int(formData, "basePrice"),
       depositPct: int(formData, "depositPct") || 25,
       status: str(formData, "status") || "PUBLISHED",
       tags: JSON.stringify(csv(formData, "tags")),
       included: JSON.stringify(lines(formData, "included")),
       layouts: JSON.stringify(layouts),
       rules: JSON.stringify(rules),
+      pricingOptions: JSON.stringify(pricingOptions),
     },
   });
   revalidatePath("/admin");
@@ -180,6 +190,8 @@ export async function updateVenueAction(formData: FormData) {
     min: str(formData, "rule_min"),
   };
 
+  const pricingOptions = parsePricingOptions(str(formData, "pricingOptions"));
+
   const updated = await prisma.venue.update({
     where: { id },
     data: {
@@ -189,13 +201,13 @@ export async function updateVenueAction(formData: FormData) {
       sqft: int(formData, "sqft"),
       seated: int(formData, "seated"),
       standing: int(formData, "standing"),
-      basePrice: int(formData, "basePrice"),
       depositPct: int(formData, "depositPct") || 25,
       status: str(formData, "status") || "PUBLISHED",
       tags: JSON.stringify(csv(formData, "tags")),
       included: JSON.stringify(lines(formData, "included")),
       layouts: JSON.stringify(layouts),
       rules: JSON.stringify(rules),
+      pricingOptions: JSON.stringify(pricingOptions),
     },
   });
 
@@ -219,6 +231,14 @@ export async function deleteVenueAction(formData: FormData) {
   });
   if (!venue) redirect("/admin");
 
+  // Guard: refuse if any CONFIRMED bookings exist on this venue.
+  const confirmedCount = await prisma.bookingRequest.count({
+    where: { venueId: id, status: "CONFIRMED" },
+  });
+  if (confirmedCount > 0) {
+    redirect(`/admin/hotels/${venue!.hotelId}?error=venue-has-confirmed-bookings`);
+  }
+
   await prisma.venue.delete({ where: { id } });
 
   revalidatePath("/admin");
@@ -232,13 +252,16 @@ export async function deleteVenueAction(formData: FormData) {
 
 export async function createBookingAction(formData: FormData) {
   const venueId = str(formData, "venueId");
-  const tierIndex = int(formData, "tierIndex");
-  const tier = TIERS[tierIndex] ?? TIERS[0];
+  const optionIndex = int(formData, "pricingOptionIndex");
 
   const venue = await prisma.venue.findUnique({ where: { id: venueId } });
   if (!venue) redirect("/venues");
 
-  const q = quote(venue!.basePrice, tier.mult, venue!.depositPct);
+  const options = parsePricingOptions(venue!.pricingOptions);
+  const chosen = options[optionIndex] ?? options[0];
+  if (!chosen) redirect(`/venues/${venueId}`);
+
+  const q = quote(chosen!.price, venue!.depositPct);
 
   await prisma.bookingRequest.create({
     data: {
@@ -248,7 +271,7 @@ export async function createBookingAction(formData: FormData) {
       eventType: str(formData, "eventType") || "Wedding",
       eventDate: str(formData, "eventDate"),
       guests: int(formData, "guests"),
-      tierLabel: tier.label,
+      tierLabel: chosen!.label,
       basePrice: q.base,
       serviceFee: q.serviceFee,
       depositDue: q.depositDue,

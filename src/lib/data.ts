@@ -43,22 +43,44 @@ export function gradFor(type: string) {
 
 export const SERVICE_FEE_PCT = 0.12; // Offsite take rate shown to guests
 
-export const TIERS = [
-  { label: "Half-day · 4 hours", mult: 1, sub: "Single ceremony or reception block" },
-  { label: "Full-day · 8 hours", mult: 1.8, sub: "Ceremony + reception, no transition gap" },
-  { label: "Full takeover · 12 hours", mult: 2.5, sub: "Exclusive use, full styling window" },
-];
+// Owner-defined pricing. Each venue has 1..N options.
+export type PricingOption = {
+  label: string;
+  durationHours: number;
+  price: number;
+};
 
-export function priceForTier(basePrice: number, mult: number) {
-  return Math.round(basePrice * mult);
-}
-
-export function quote(basePrice: number, mult: number, depositPct: number) {
-  const base = priceForTier(basePrice, mult);
+export function quote(price: number, depositPct: number) {
+  const base = Math.round(price);
   const serviceFee = Math.round(base * SERVICE_FEE_PCT);
   const total = base + serviceFee;
   const depositDue = Math.round(base * (depositPct / 100));
   return { base, serviceFee, total, depositDue };
+}
+
+// Strict parser — drops malformed entries so the UI never has to defend.
+export function parsePricingOptions(s: string): PricingOption[] {
+  try {
+    const v = JSON.parse(s);
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((o) => ({
+        label: String(o?.label ?? "").trim(),
+        durationHours: Number.isFinite(+o?.durationHours) ? +o.durationHours : 0,
+        price: Number.isFinite(+o?.price) ? Math.round(+o.price) : 0,
+      }))
+      .filter((o) => o.label.length > 0 && o.price > 0);
+  } catch {
+    return [];
+  }
+}
+
+// Cheapest option price, used for "From $X" in cards/lists.
+// Falls back to basePrice so listings don't go blank during backfill.
+export function fromPrice(pricingOptions: string, basePriceFallback: number): number {
+  const opts = parsePricingOptions(pricingOptions);
+  if (opts.length === 0) return basePriceFallback;
+  return Math.min(...opts.map((o) => o.price));
 }
 
 export const fmt = (n: number) => "$" + Math.round(n).toLocaleString();

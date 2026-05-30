@@ -21,6 +21,15 @@ async function main() {
     return;
   }
 
+  // Helper for seed: build a 3-option set from a base 4-hr price using the old multipliers.
+  // This lets the seed look the same as before from the agent's perspective, but the
+  // app no longer hardcodes these — they're stored per venue.
+  const tieredOptions = (base: number) => [
+    { label: "Half-day · 4 hours", durationHours: 4, price: base },
+    { label: "Full-day · 8 hours", durationHours: 8, price: Math.round(base * 1.8) },
+    { label: "Full takeover · 12 hours", durationHours: 12, price: Math.round(base * 2.5) },
+  ];
+
   const seed = [
     {
       hotel: { name: "JW Marriott Cancún Resort & Spa", city: "Hotel Zone, Cancún", zone: "Punta Cancún", description: "Five-star beachfront resort with the Hotel Zone's most-requested outdoor venues." },
@@ -28,7 +37,8 @@ async function main() {
         {
           name: "The Tropical Garden", type: "Garden",
           description: "A canopied tropical garden steps from the Caribbean — string-lit palms, a manicured ceremony lawn, and a private cocktail terrace.",
-          sqft: 7200, seated: 180, standing: 300, basePrice: 18000, depositPct: 25,
+          sqft: 7200, seated: 180, standing: 300, depositPct: 25,
+          pricingOptions: tieredOptions(18000),
           tags: ["Hot Pick", "Garden Venues"],
           included: ["On-site event coordinator", "Tables, chairs & house linens", "Garden landscape lighting", "Backup weather plan (indoor ballroom)", "Setup & teardown crew", "Valet parking for 40 vehicles"],
           layouts: { Ceremony: 200, Banquet: 160, Cocktail: 300, Theatre: 220 },
@@ -42,7 +52,8 @@ async function main() {
         {
           name: "Oceanfront Terrace", type: "Oceanfront",
           description: "An elevated limestone terrace pitched directly over the surf. Sunset ceremonies here are the resort's signature.",
-          sqft: 5400, seated: 120, standing: 200, basePrice: 22000, depositPct: 30,
+          sqft: 5400, seated: 120, standing: 200, depositPct: 30,
+          pricingOptions: tieredOptions(22000),
           tags: ["Hot Pick"],
           included: ["Dedicated maître d'", "Chiavari chairs & premium linens", "Sound system & microphones", "Sunset timing consultation", "Champagne welcome station"],
           layouts: { Ceremony: 140, Banquet: 110, Cocktail: 200, Theatre: 150 },
@@ -56,7 +67,8 @@ async function main() {
         {
           name: "Sky Ballroom", type: "Ballroom",
           description: "Column-free ballroom on the top floor with floor-to-ceiling glass and a built-in stage.",
-          sqft: 9600, seated: 300, standing: 500, basePrice: 24000, depositPct: 30,
+          sqft: 9600, seated: 300, standing: 500, depositPct: 30,
+          pricingOptions: tieredOptions(24000),
           tags: ["Corporate"],
           included: ["A/V package & rigging points", "Stage, podium & lectern", "Conference Wi-Fi (500 Mbps)", "Breakout room access", "Loading dock & freight elevator", "On-site tech engineer"],
           layouts: { Banquet: 300, Theatre: 500, Classroom: 240, Cocktail: 450 },
@@ -70,7 +82,8 @@ async function main() {
         {
           name: "Sunset Rooftop", type: "Rooftop",
           description: "Adults-only rooftop with a glass infinity edge facing due west. Built for cocktail receptions and intimate dinners as the sky turns.",
-          sqft: 4200, seated: 100, standing: 160, basePrice: 15500, depositPct: 25,
+          sqft: 4200, seated: 100, standing: 160, depositPct: 25,
+          pricingOptions: tieredOptions(15500),
           tags: ["Hot Pick"],
           included: ["Mixology bar setup", "Lounge furniture & fire features", "DJ booth & sound", "Sunset golden-hour slot priority"],
           layouts: { Cocktail: 160, Banquet: 90, Ceremony: 110, Lounge: 130 },
@@ -94,13 +107,13 @@ async function main() {
           sqft: v.sqft,
           seated: v.seated,
           standing: v.standing,
-          basePrice: v.basePrice,
           depositPct: v.depositPct,
           status: "PUBLISHED",
           tags: JSON.stringify(v.tags),
           included: JSON.stringify(v.included),
           layouts: JSON.stringify(v.layouts),
           rules: JSON.stringify(v.rules),
+          pricingOptions: JSON.stringify(v.pricingOptions),
         },
       });
     }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { gradFor, parseArray, fmt } from "@/lib/data";
+import { gradFor, parseArray, fmt, fromPrice } from "@/lib/data";
 
 type V = {
   id: string;
@@ -8,6 +8,7 @@ type V = {
   standing: number;
   sqft: number;
   basePrice: number;
+  pricingOptions: string;
   tags: string;
   hotel: { name: string; city: string };
 };
@@ -15,6 +16,7 @@ type V = {
 export default function VenueCard({ v }: { v: V }) {
   const tags = parseArray(v.tags);
   const hot = tags.includes("Hot Pick");
+  const startPrice = fromPrice(v.pricingOptions, v.basePrice);
   return (
     <Link href={`/venues/${v.id}`} className="card">
       <div className="cmedia" style={{ background: gradFor(v.type) }}>
@@ -42,7 +44,7 @@ export default function VenueCard({ v }: { v: V }) {
           </span>
         </div>
         <div className="cprice">
-          <b>{fmt(v.basePrice)}</b> · per 4-hr block
+          From <b>{fmt(startPrice)}</b>
         </div>
       </div>
     </Link>

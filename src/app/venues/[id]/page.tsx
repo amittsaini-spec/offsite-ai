@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { gradFor, parseArray, parseObj } from "@/lib/data";
+import { gradFor, parseArray, parseObj, parsePricingOptions } from "@/lib/data";
 import SiteNav from "../../_components/SiteNav";
 import BookingForm from "./BookingForm";
 
@@ -27,7 +27,12 @@ export default async function VenueDetail({
   const included = parseArray(v!.included);
   const layouts = parseObj(v!.layouts) as Record<string, number>;
   const rules = parseObj(v!.rules) as Record<string, string>;
+  const pricingOptions = parsePricingOptions(v!.pricingOptions);
   const grad = gradFor(v!.type);
+  // Shortest available block, used in the "scheduling" fact card.
+  const shortestHours = pricingOptions.length
+    ? Math.min(...pricingOptions.map((o) => o.durationHours).filter((h) => h > 0))
+    : 0;
 
   return (
     <>
@@ -90,7 +95,9 @@ export default async function VenueDetail({
                 <div className="fact">
                   <div className="ic">⏱</div>
                   <div>
-                    <div className="ft">4-hr blocks</div>
+                    <div className="ft">
+                      {shortestHours > 0 ? `From ${shortestHours}-hr blocks` : "Flexible blocks"}
+                    </div>
                     <div className="fd">Flexible scheduling</div>
                   </div>
                 </div>
@@ -179,10 +186,16 @@ export default async function VenueDetail({
                   Make another request
                 </Link>
               </div>
+            ) : pricingOptions.length === 0 ? (
+              <div className="book">
+                <div style={{ color: "var(--ink-2)" }}>
+                  Pricing isn&apos;t live for this venue yet. Check back shortly.
+                </div>
+              </div>
             ) : (
               <BookingForm
                 venueId={v!.id}
-                basePrice={v!.basePrice}
+                pricingOptions={pricingOptions}
                 depositPct={v!.depositPct}
                 rating="New"
               />

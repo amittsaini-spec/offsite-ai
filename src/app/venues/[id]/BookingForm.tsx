@@ -1,27 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { TIERS, quote, fmt } from "@/lib/data";
+import { quote, fmt, type PricingOption } from "@/lib/data";
 import { createBookingAction } from "@/lib/actions";
 
 export default function BookingForm({
   venueId,
-  basePrice,
+  pricingOptions,
   depositPct,
   rating,
 }: {
   venueId: string;
-  basePrice: number;
+  pricingOptions: PricingOption[];
   depositPct: number;
   rating: string;
 }) {
-  const [tier, setTier] = useState(0);
-  const q = quote(basePrice, TIERS[tier].mult, depositPct);
+  const [index, setIndex] = useState(0);
+  const selected = pricingOptions[index] ?? pricingOptions[0];
+  const q = quote(selected.price, depositPct);
+
+  // Headline label: take what's before the "·" if present, else the whole label.
+  const headline = selected.label.includes("·")
+    ? selected.label.split("·")[0].trim()
+    : selected.label;
 
   return (
     <div className="book">
       <div className="bp">
-        {fmt(q.base)} <span>/ {TIERS[tier].label.split("·")[0].trim()}</span>
+        {fmt(q.base)} <span>/ {headline}</span>
       </div>
       <div style={{ fontSize: 13.5, color: "var(--muted)", marginTop: 6 }}>
         ★ {rating} · refundable hold reserves your date
@@ -40,24 +46,26 @@ export default function BookingForm({
         Booking option
       </div>
       <div className="tiers">
-        {TIERS.map((t, i) => (
+        {pricingOptions.map((o, i) => (
           <div
             key={i}
-            className={"tier" + (i === tier ? " on" : "")}
-            onClick={() => setTier(i)}
+            className={"tier" + (i === index ? " on" : "")}
+            onClick={() => setIndex(i)}
           >
             <div>
-              <div className="tn">{t.label}</div>
-              <div className="td">{t.sub}</div>
+              <div className="tn">{o.label}</div>
+              <div className="td">
+                {o.durationHours > 0 ? `${o.durationHours}-hour block` : "Custom"}
+              </div>
             </div>
-            <div className="tp">{fmt(quote(basePrice, t.mult, depositPct).base)}</div>
+            <div className="tp">{fmt(o.price)}</div>
           </div>
         ))}
       </div>
 
       <form action={createBookingAction}>
         <input type="hidden" name="venueId" value={venueId} />
-        <input type="hidden" name="tierIndex" value={tier} />
+        <input type="hidden" name="pricingOptionIndex" value={index} />
 
         <div className="btwo">
           <input className="binput" name="eventDate" type="date" required />

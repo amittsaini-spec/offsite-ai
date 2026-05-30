@@ -1,29 +1,57 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { fmt, gradFor } from "@/lib/data";
+import { fmt, gradFor, fromPrice } from "@/lib/data";
 import { deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 
 export const dynamic = "force-dynamic";
 
+const ERROR_MESSAGES: Record<string, string> = {
+  "hotel-has-confirmed-bookings":
+    "Can't delete this hotel — one or more venues have CONFIRMED bookings. Decline or complete them first.",
+  "venue-has-confirmed-bookings":
+    "Can't delete that venue — it has CONFIRMED bookings. Decline or complete them first.",
+};
+
 export default async function HotelDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error } = await searchParams;
   const hotel = await prisma.hotel.findUnique({
     where: { id },
     include: { venues: { orderBy: { createdAt: "desc" } } },
   });
   if (!hotel) notFound();
 
+  const errorMessage = error ? ERROR_MESSAGES[error] : null;
+
   return (
     <>
       <Link href="/admin" className="back">
         ← Dashboard
       </Link>
+
+      {errorMessage && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            background: "#fbe9e4",
+            color: "var(--coral-d)",
+            fontWeight: 500,
+            fontSize: 14,
+          }}
+        >
+          {errorMessage}
+        </div>
+      )}
       <div className="atop" style={{ marginTop: 10 }}>
         <div>
           <div className="ah1">{hotel!.name}</div>
@@ -79,7 +107,9 @@ export default async function HotelDetail({
                 </div>
               </div>
               <div className="tsp" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontWeight: 600 }}>{fmt(v.basePrice)}</span>
+                <span style={{ fontWeight: 600 }}>
+                  from {fmt(fromPrice(v.pricingOptions, v.basePrice))}
+                </span>
                 <span className={"pill " + (v.status === "PUBLISHED" ? "ok" : "draft")}>
                   {v.status}
                 </span>

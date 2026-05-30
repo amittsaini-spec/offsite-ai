@@ -44,13 +44,14 @@ model Venue {
   sqft        Int      @default(0)
   seated      Int      @default(0)
   standing    Int      @default(0)
-  basePrice   Int      @default(0)   // price of a 4-hour block, whole dollars
+  basePrice   Int      @default(0)   // DEPRECATED: legacy single-price field, kept for backfill
   depositPct  Int      @default(25)
   status      String   @default("PUBLISHED") // DRAFT | PUBLISHED
-  tags        String   @default("[]")  // JSON array of strings
-  included    String   @default("[]")  // JSON array of strings
-  layouts     String   @default("{}")  // JSON object { Ceremony: 200, ... }
-  rules       String   @default("{}")  // JSON object { cancel, time, catering, min }
+  tags           String @default("[]")  // JSON array of strings
+  included       String @default("[]")  // JSON array of strings
+  layouts        String @default("{}")  // JSON object { Ceremony: 200, ... }
+  rules          String @default("{}")  // JSON object { cancel, time, catering, min }
+  pricingOptions String @default("[]")  // JSON array of { label, durationHours, price }
   createdAt   DateTime @default(now())
   bookings    BookingRequest[]
 }

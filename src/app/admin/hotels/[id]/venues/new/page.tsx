@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { VENUE_TYPES } from "@/lib/data";
 import { createVenueAction } from "@/lib/actions";
+import PricingOptionsEditor from "@/app/admin/_components/PricingOptionsEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -69,11 +70,7 @@ export default async function NewVenue({
           </div>
         </div>
 
-        <div className="fgrid3">
-          <div className="field">
-            <label>Base price (4-hr block)</label>
-            <input className="input" name="basePrice" type="number" min={0} defaultValue={18000} />
-          </div>
+        <div className="fgrid">
           <div className="field">
             <label>Deposit %</label>
             <input className="input" name="depositPct" type="number" min={0} max={100} defaultValue={25} />
@@ -86,6 +83,12 @@ export default async function NewVenue({
             </select>
           </div>
         </div>
+
+        <div className="fsec">Pricing options</div>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+          Define one or more booking options. Guests pick one at checkout.
+        </div>
+        <PricingOptionsEditor initial={[]} />
 
         <div className="field">
           <label>Tags (comma separated)</label>

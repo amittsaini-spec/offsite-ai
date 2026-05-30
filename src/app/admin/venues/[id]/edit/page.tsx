@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { VENUE_TYPES, parseArray, parseObj } from "@/lib/data";
+import { VENUE_TYPES, parseArray, parseObj, parsePricingOptions } from "@/lib/data";
 import { updateVenueAction, deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
+import PricingOptionsEditor from "@/app/admin/_components/PricingOptionsEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function EditVenue({
   const included = parseArray(venue!.included).join("\n");
   const layouts = parseObj(venue!.layouts) as Record<string, number>;
   const rules = parseObj(venue!.rules) as Record<string, string>;
+  const pricingOptions = parsePricingOptions(venue!.pricingOptions);
 
   return (
     <>
@@ -108,17 +110,7 @@ export default async function EditVenue({
           </div>
         </div>
 
-        <div className="fgrid3">
-          <div className="field">
-            <label>Base price (4-hr block)</label>
-            <input
-              className="input"
-              name="basePrice"
-              type="number"
-              min={0}
-              defaultValue={venue!.basePrice}
-            />
-          </div>
+        <div className="fgrid">
           <div className="field">
             <label>Deposit %</label>
             <input
@@ -138,6 +130,12 @@ export default async function EditVenue({
             </select>
           </div>
         </div>
+
+        <div className="fsec">Pricing options</div>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+          Define one or more booking options. Guests pick one at checkout.
+        </div>
+        <PricingOptionsEditor initial={pricingOptions} />
 
         <div className="field">
           <label>Tags (comma separated)</label>
