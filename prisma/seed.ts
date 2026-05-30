@@ -119,6 +119,12 @@ async function main() {
     }
   }
   console.log("Seeded", seed.length, "hotels with sample venues.");
+
+  // Home-page CMS defaults so fresh installs get the same content the
+  // public page used to render from hardcoded constants.
+  console.log("\nSeeding home-page CMS defaults...");
+  const { seedHomeDefaults } = await import("./seed-home");
+  await seedHomeDefaults(prisma);
 }
 
 main()

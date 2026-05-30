@@ -261,6 +261,79 @@ export function relativeTime(input: string | Date): string {
   });
 }
 
+// ─── Home-page CMS types + parsers ──────────────────────────
+export type ValueCard = { figure: string; title: string; desc: string };
+export type SearchPlaceholders = {
+  where: string;
+  event: string;
+  date: string;
+  guests: string;
+};
+
+// Fallbacks mirror the original hardcoded copy so the page never goes
+// blank if a row is missing or malformed.
+export const HERO_PLACEHOLDER_FALLBACK: SearchPlaceholders = {
+  where: "Cancún · Riviera Maya",
+  event: "Wedding ceremony",
+  date: "Add dates",
+  guests: "120 guests",
+};
+
+export function parseValueCards(s: string): ValueCard[] {
+  try {
+    const v = JSON.parse(s);
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((o) => ({
+        figure: String(o?.figure ?? "").trim(),
+        title: String(o?.title ?? "").trim(),
+        desc: String(o?.desc ?? "").trim(),
+      }))
+      .filter((c) => c.figure || c.title || c.desc);
+  } catch {
+    return [];
+  }
+}
+
+export function parseSearchPlaceholders(s: string): SearchPlaceholders {
+  try {
+    const v = JSON.parse(s);
+    if (!v || typeof v !== "object") return HERO_PLACEHOLDER_FALLBACK;
+    return {
+      where: String(v.where ?? "").trim() || HERO_PLACEHOLDER_FALLBACK.where,
+      event: String(v.event ?? "").trim() || HERO_PLACEHOLDER_FALLBACK.event,
+      date: String(v.date ?? "").trim() || HERO_PLACEHOLDER_FALLBACK.date,
+      guests:
+        String(v.guests ?? "").trim() || HERO_PLACEHOLDER_FALLBACK.guests,
+    };
+  } catch {
+    return HERO_PLACEHOLDER_FALLBACK;
+  }
+}
+
+// Hero headline italics: split on *word* spans and return a tuple of
+// (plain, italic, plain, italic, ...). The caller renders italic spans
+// inside <em>. Safe from HTML injection because the page renders the
+// parts as React text, never via dangerouslySetInnerHTML.
+export function splitItalics(s: string): { text: string; italic: boolean }[] {
+  if (!s) return [];
+  const out: { text: string; italic: boolean }[] = [];
+  const re = /\*([^*]+)\*/g;
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s))) {
+    if (m.index > lastIndex) {
+      out.push({ text: s.slice(lastIndex, m.index), italic: false });
+    }
+    out.push({ text: m[1], italic: true });
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < s.length) {
+    out.push({ text: s.slice(lastIndex), italic: false });
+  }
+  return out;
+}
+
 // ─── Date helpers (timezone-safe, YYYY-MM-DD strings) ───
 // We store calendar dates as plain YYYY-MM-DD strings to avoid UTC drift —
 // `new Date("2026-06-15")` parses as UTC midnight which can shift a day in

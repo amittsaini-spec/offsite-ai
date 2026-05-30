@@ -39,7 +39,23 @@ input,select,textarea{ font-family:inherit; }
 .btn-emerald:hover{ background:var(--emerald-2); }
 
 /* hero */
-.hero{ max-width:1200px; margin:0 auto; padding:62px 28px 30px; }
+.hero-wrap{ position:relative; isolation:isolate; }
+.hero{ max-width:1200px; margin:0 auto; padding:62px 28px 30px; position:relative; z-index:1; }
+.hero-bg{ position:absolute; inset:0; overflow:hidden; z-index:0; }
+.hero-bg-layer{ position:absolute; inset:0; background-size:cover; background-position:center;
+  transition:opacity 1.4s ease-in-out; }
+.hero-bg-fade{ will-change:opacity; }
+.hero-bg-video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.hero-bg-iframe{ position:absolute; top:50%; left:50%; width:120%; height:120%;
+  transform:translate(-50%,-50%); border:0; pointer-events:none; }
+/* Cream gradient on desktop keeps the type readable, near-solid sand scrim
+   on mobile so the background never overpowers the search bar. */
+.hero-bg-scrim{ position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(250,247,241,.78) 0%, rgba(250,247,241,.92) 75%, var(--sand-50) 100%);
+  pointer-events:none; }
+@media (max-width:760px){
+  .hero-bg-scrim{ background:linear-gradient(180deg, rgba(250,247,241,.94), var(--sand-50) 65%); }
+}
 .eyebrow{ display:inline-flex; align-items:center; gap:9px; font-size:12.5px; font-weight:600; letter-spacing:.14em;
   text-transform:uppercase; color:var(--emerald-2); margin-bottom:22px; }
 .eyebrow .dot{ width:7px; height:7px; border-radius:50%; background:var(--coral); display:inline-block; }

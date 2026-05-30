@@ -10,6 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:backfill-pricing": "tsx prisma/backfill-pricing.ts",
+    "db:seed-home": "tsx prisma/seed-home.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

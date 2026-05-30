@@ -11,6 +11,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Home-page CMS ──────────────────────────────────────────────
+// Everything on the public home page is editable; defaults match the
+// hardcoded copy that used to live in src/app/page.tsx so the page
+// renders identically when nothing has been overridden.
+
+model SiteSettings {
+  id                 String   @id @default("home")
+  heroEyebrow        String   @default("")
+  heroHeadline       String   @default("")   // *asterisks* render as <em>
+  heroSubhead        String   @default("")
+  heroMediaType      String   @default("none")   // none | image | video | slideshow
+  heroMedia          String   @default("[]")     // JSON array of URLs (slideshow uses all)
+  heroVideoEmbed     String   @default("")       // optional YouTube/Vimeo URL when type=video
+  searchPlaceholders String   @default("{}")     // JSON { where, event, date, guests }
+  valueCards         String   @default("[]")     // JSON [{ figure, title, desc }]
+  ctaHeadline        String   @default("")
+  ctaBody            String   @default("")
+  ctaButtonLabel     String   @default("")
+  ctaButtonLink      String   @default("")
+  footerTagline      String   @default("")
+  updatedAt          DateTime @updatedAt
+}
+
+model HomeCollection {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String
+  imageUrl  String   @default("")
+  linkType  String   @default("type")  // "type" | "tag"
+  linkValue String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model HomeSection {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String
+  filterType  String   @default("tag")  // "tag" | "type" | "featured"
+  filterValue String   @default("")
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
 // DestaLabs team members who act as the agent managing all hotels.
 model User {
   id           String   @id @default(cuid())
