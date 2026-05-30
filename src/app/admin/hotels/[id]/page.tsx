@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { fmt, gradFor } from "@/lib/data";
+import { deleteVenueAction } from "@/lib/actions";
+import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +32,14 @@ export default async function HotelDetail({
             {hotel!.zone ? ` · ${hotel!.zone}` : ""}
           </div>
         </div>
-        <Link href={`/admin/hotels/${hotel!.id}/venues/new`} className="btn-emerald">
-          + Add venue
-        </Link>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <Link href={`/admin/hotels/${hotel!.id}/edit`} className="btn-ghost">
+            Edit hotel
+          </Link>
+          <Link href={`/admin/hotels/${hotel!.id}/venues/new`} className="btn-emerald">
+            + Add venue
+          </Link>
+        </div>
       </div>
 
       {hotel!.description && (
@@ -79,6 +86,21 @@ export default async function HotelDetail({
                 <Link href={`/venues/${v.id}`} className="tsub" style={{ color: "var(--emerald)" }}>
                   View ↗
                 </Link>
+                <Link
+                  href={`/admin/venues/${v.id}/edit`}
+                  className="pill draft"
+                  style={{ textTransform: "uppercase" }}
+                >
+                  Edit
+                </Link>
+                <ConfirmDeleteButton
+                  action={deleteVenueAction}
+                  id={v.id}
+                  confirmText={`Delete "${v.name}" and all of its booking requests? This cannot be undone.`}
+                  className="pill no"
+                >
+                  Delete
+                </ConfirmDeleteButton>
               </div>
             </div>
           ))

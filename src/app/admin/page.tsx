@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/data";
+import { deleteHotelAction } from "@/lib/actions";
+import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -67,13 +69,36 @@ export default async function Dashboard() {
             </div>
           ) : (
             hotels.map((h) => (
-              <Link key={h.id} href={`/admin/hotels/${h.id}`} className="trow">
-                <div>
+              <div key={h.id} className="trow">
+                <Link
+                  href={`/admin/hotels/${h.id}`}
+                  style={{ flex: 1, display: "block" }}
+                >
                   <div className="tmain">{h.name}</div>
                   <div className="tsub">{h.city}</div>
+                </Link>
+                <div
+                  className="tsp tsub"
+                  style={{ display: "flex", alignItems: "center", gap: 10 }}
+                >
+                  <span>{h._count.venues} venues</span>
+                  <Link
+                    href={`/admin/hotels/${h.id}/edit`}
+                    className="pill draft"
+                    style={{ textTransform: "uppercase" }}
+                  >
+                    Edit
+                  </Link>
+                  <ConfirmDeleteButton
+                    action={deleteHotelAction}
+                    id={h.id}
+                    confirmText={`Delete "${h.name}" and ALL of its venues and bookings? This cannot be undone.`}
+                    className="pill no"
+                  >
+                    Delete
+                  </ConfirmDeleteButton>
                 </div>
-                <div className="tsp tsub">{h._count.venues} venues</div>
-              </Link>
+              </div>
             ))
           )}
         </div>

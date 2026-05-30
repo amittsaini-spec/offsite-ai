@@ -72,6 +72,49 @@ export async function createHotelAction(formData: FormData) {
   redirect(`/admin/hotels/${hotel.id}`);
 }
 
+export async function updateHotelAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin");
+
+  await prisma.hotel.update({
+    where: { id },
+    data: {
+      name: str(formData, "name"),
+      city: str(formData, "city"),
+      zone: str(formData, "zone"),
+      description: str(formData, "description"),
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/hotels/${id}`);
+  revalidatePath("/venues");
+  redirect(`/admin/hotels/${id}`);
+}
+
+export async function deleteHotelAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin");
+
+  // Capture venue ids before cascading delete so we can revalidate their public pages.
+  const venues = await prisma.venue.findMany({
+    where: { hotelId: id },
+    select: { id: true },
+  });
+  await prisma.hotel.delete({ where: { id } });
+
+  revalidatePath("/admin");
+  revalidatePath("/venues");
+  for (const v of venues) revalidatePath(`/venues/${v.id}`);
+  redirect("/admin");
+}
+
 /* ---------- VENUES ---------- */
 
 export async function createVenueAction(formData: FormData) {
@@ -115,6 +158,74 @@ export async function createVenueAction(formData: FormData) {
   revalidatePath(`/admin/hotels/${hotelId}`);
   revalidatePath("/venues");
   redirect(`/admin/hotels/${hotelId}`);
+}
+
+export async function updateVenueAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin");
+
+  const layouts: Record<string, number> = {};
+  for (const key of ["Ceremony", "Banquet", "Theatre", "Cocktail", "Classroom", "Lounge"]) {
+    const v = int(formData, "layout_" + key);
+    if (v > 0) layouts[key] = v;
+  }
+
+  const rules = {
+    cancel: str(formData, "rule_cancel"),
+    time: str(formData, "rule_time"),
+    catering: str(formData, "rule_catering"),
+    min: str(formData, "rule_min"),
+  };
+
+  const updated = await prisma.venue.update({
+    where: { id },
+    data: {
+      name: str(formData, "name"),
+      type: str(formData, "type") || "Garden",
+      description: str(formData, "description"),
+      sqft: int(formData, "sqft"),
+      seated: int(formData, "seated"),
+      standing: int(formData, "standing"),
+      basePrice: int(formData, "basePrice"),
+      depositPct: int(formData, "depositPct") || 25,
+      status: str(formData, "status") || "PUBLISHED",
+      tags: JSON.stringify(csv(formData, "tags")),
+      included: JSON.stringify(lines(formData, "included")),
+      layouts: JSON.stringify(layouts),
+      rules: JSON.stringify(rules),
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/hotels/${updated.hotelId}`);
+  revalidatePath("/venues");
+  revalidatePath(`/venues/${id}`);
+  redirect(`/admin/hotels/${updated.hotelId}`);
+}
+
+export async function deleteVenueAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin");
+
+  const venue = await prisma.venue.findUnique({
+    where: { id },
+    select: { hotelId: true },
+  });
+  if (!venue) redirect("/admin");
+
+  await prisma.venue.delete({ where: { id } });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/hotels/${venue!.hotelId}`);
+  revalidatePath("/venues");
+  revalidatePath(`/venues/${id}`);
+  redirect(`/admin/hotels/${venue!.hotelId}`);
 }
 
 /* ---------- BOOKINGS (public, concierge-first: no charge yet) ---------- */
