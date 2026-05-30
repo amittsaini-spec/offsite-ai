@@ -71,13 +71,13 @@ export default function PhotoGallery({
         >
           {tourUrl && (
             <a
-              href="#tour"
+              href={tourUrl}
+              target="_blank"
+              rel="noopener"
               className="gtag"
               style={{ background: "rgba(0,0,0,.65)", color: "#fff" }}
-              onClick={(e) => {
-                // Prevent the parent cell's open() from firing.
-                e.stopPropagation();
-              }}
+              // Prevent the parent cell's open() (lightbox) from firing.
+              onClick={(e) => e.stopPropagation()}
             >
               ◎ Launch 360° virtual tour
             </a>

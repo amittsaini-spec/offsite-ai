@@ -98,23 +98,6 @@ export default async function VenueDetail({
           fallbackGradient={grad}
         />
 
-        {v!.tourUrl && (
-          <div id="tour" className="dsec" style={{ borderTop: "1px solid var(--line)", scrollMarginTop: 100 }}>
-            <h3>Virtual tour</h3>
-            <div className="tour-frame">
-              <iframe
-                src={v!.tourUrl}
-                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
-                allowFullScreen
-                title={`${v!.name} virtual tour`}
-              />
-            </div>
-            <a href={v!.tourUrl} target="_blank" rel="noreferrer" className="tour-link">
-              Open tour in a new tab ↗
-            </a>
-          </div>
-        )}
-
         {(embed || (v!.videoUrl && /\.(mp4|webm|mov)(\?|$)/i.test(v!.videoUrl))) && (
           <div className="dsec" style={{ borderTop: "1px solid var(--line)" }}>
             <h3>Video tour</h3>
