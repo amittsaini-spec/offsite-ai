@@ -135,6 +135,17 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
+// Verb labels for the transition buttons on the booking detail page.
+// Distinct from STATUS_LABEL — "Confirm" reads better as a CTA than "Confirmed".
+export const STATUS_ACTION: Record<BookingStatus, string> = {
+  REQUESTED: "Reopen as requested",
+  CONFIRMED: "Confirm",
+  DEPOSIT_HELD: "Mark deposit held",
+  COMPLETED: "Mark completed",
+  DECLINED: "Decline",
+  CANCELLED: "Cancel",
+};
+
 export function canTransition(from: string, to: string): boolean {
   return (STATUS_TRANSITIONS as Record<string, string[]>)[from]?.includes(to) ?? false;
 }
@@ -228,6 +239,27 @@ export function embedFromUrl(url: string): string | null {
 }
 
 export const fmt = (n: number) => "$" + Math.round(n).toLocaleString();
+
+// Short, human relative-time formatter — "2h ago", "yesterday", "Mar 14".
+export function relativeTime(input: string | Date): string {
+  const date = typeof input === "string" ? new Date(input) : input;
+  if (isNaN(date.getTime())) return "";
+  const diffMs = Date.now() - date.getTime();
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 45) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 2) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+  });
+}
 
 // ─── Date helpers (timezone-safe, YYYY-MM-DD strings) ───
 // We store calendar dates as plain YYYY-MM-DD strings to avoid UTC drift —
