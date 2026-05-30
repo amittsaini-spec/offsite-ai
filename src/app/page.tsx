@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { gradFor } from "@/lib/data";
+import { gradFor, parseArray, HIDE_VENUES_WITHOUT_PHOTOS } from "@/lib/data";
 import SiteNav from "./_components/SiteNav";
 import VenueCard from "./_components/VenueCard";
 
@@ -14,11 +14,18 @@ const COLLECTIONS = [
 ];
 
 export default async function Home() {
-  const venues = await prisma.venue.findMany({
+  const allPublished = await prisma.venue.findMany({
     where: { status: "PUBLISHED" },
     include: { hotel: true },
     orderBy: { createdAt: "desc" },
   });
+
+  // DEMO_HIDE_NO_PHOTOS: filter out venues without uploaded photos so the
+  // public marketplace looks complete. Flip HIDE_VENUES_WITHOUT_PHOTOS in
+  // lib/data.ts to disable — admin views are unaffected.
+  const venues = HIDE_VENUES_WITHOUT_PHOTOS
+    ? allPublished.filter((v) => parseArray(v.photos).length > 0)
+    : allPublished;
 
   const hot = venues.filter((v) => v.tags.includes("Hot Pick")).slice(0, 3);
   const gardens = venues.filter((v) => v.type === "Garden").slice(0, 3);

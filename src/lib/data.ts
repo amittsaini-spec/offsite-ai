@@ -1,5 +1,11 @@
 // Shared constants + pure helpers used across server and client components.
 
+// DEMO: hide venues with no uploaded photos from the public marketplace
+// (home + /venues browse). Set to false to show every PUBLISHED venue
+// again, regardless of whether photos have been uploaded yet. Admin views
+// are unaffected by this flag.
+export const HIDE_VENUES_WITHOUT_PHOTOS = true;
+
 // Curated list of hotel amenities for the multi-select on the hotel profile.
 export const AMENITIES = [
   "WiFi",
