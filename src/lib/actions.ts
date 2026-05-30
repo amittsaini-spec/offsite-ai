@@ -304,6 +304,57 @@ export async function updateVenueAction(formData: FormData) {
   redirect(`/admin/hotels/${updated.hotelId}`);
 }
 
+// Narrow availability-only update used by /admin/availability. Doesn't
+// touch any other venue field, so safe to call from a calendar UI that
+// only knows about blackouts.
+export async function updateVenueAvailabilityAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin/availability");
+
+  const blackouts = dateArray(formData, "blackoutDates");
+  const updated = await prisma.venue.update({
+    where: { id },
+    data: { blackoutDates: JSON.stringify(blackouts) },
+    select: { hotelId: true },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/availability");
+  revalidatePath(`/admin/hotels/${updated.hotelId}`);
+  revalidatePath(`/admin/venues/${id}/edit`);
+  revalidatePath("/venues");
+  revalidatePath(`/venues/${id}`);
+  redirect(`/admin/availability?venue=${id}&saved=1`);
+}
+
+// Quick PUBLISHED <-> DRAFT toggle for the hotels & venues table.
+export async function toggleVenueStatusAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin/hotels");
+
+  const current = await prisma.venue.findUnique({
+    where: { id },
+    select: { status: true, hotelId: true },
+  });
+  if (!current) redirect("/admin/hotels");
+
+  const next = current!.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
+  await prisma.venue.update({ where: { id }, data: { status: next } });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/hotels");
+  revalidatePath(`/admin/hotels/${current!.hotelId}`);
+  revalidatePath("/venues");
+  revalidatePath(`/venues/${id}`);
+  redirect("/admin/hotels");
+}
+
 export async function deleteVenueAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

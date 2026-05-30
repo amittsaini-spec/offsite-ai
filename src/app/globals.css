@@ -328,6 +328,33 @@ input,select,textarea{ font-family:inherit; }
 .btn-warn{ font-size:14px; font-weight:600; padding:10px 18px; border-radius:999px;
   border:1px solid var(--coral); color:var(--coral-d); background:var(--white); transition:.18s; display:inline-block; }
 .btn-warn:hover{ background:var(--coral); color:#fff; }
+
+/* availability page — left rail of venues + calendar panel */
+.availwrap{ display:grid; grid-template-columns:260px 1fr; gap:22px; align-items:start; }
+@media (max-width:1100px){ .availwrap{ grid-template-columns:1fr; } }
+.vrail{ background:var(--white); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  max-height:640px; overflow-y:auto; }
+.vrail a{ display:block; padding:14px 16px; border-bottom:1px solid var(--line); transition:.12s; }
+.vrail a:last-child{ border-bottom:none; }
+.vrail a:hover{ background:var(--sand-50); }
+.vrail a.on{ background:rgba(15,61,48,.07); border-left:3px solid var(--emerald); padding-left:13px; }
+.vrail .vrname{ font-size:14px; font-weight:600; color:var(--ink); }
+.vrail .vrsub{ font-size:12px; color:var(--muted); margin-top:2px; }
+.savedchip{ display:inline-flex; align-items:center; gap:6px; background:#e2efe7; color:var(--emerald);
+  padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700; }
+
+/* hotels & venues table */
+.hcard{ background:var(--white); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  margin-bottom:14px; }
+.hcard-head{ display:flex; justify-content:space-between; align-items:center; padding:16px 20px;
+  background:var(--sand-50); border-bottom:1px solid var(--line); }
+.hcard-head .hh{ font-family:'Fraunces',serif; font-size:18px; font-weight:500; }
+.hcard-head .hsub{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+/* search input shared style */
+.search-input{ width:100%; max-width:380px; padding:11px 16px; border:1px solid var(--line);
+  border-radius:999px; background:var(--white); font-size:14px; color:var(--ink); font-family:inherit; }
+.search-input:focus{ outline:none; border-color:var(--emerald); }
 .panel{ background:var(--white); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
 .panel h3{ font-family:'Fraunces',serif; font-weight:500; font-size:19px; padding:18px 20px; border-bottom:1px solid var(--line); }
 .trow{ display:flex; align-items:center; gap:14px; padding:15px 20px; border-bottom:1px solid var(--line); font-size:14.5px; }
