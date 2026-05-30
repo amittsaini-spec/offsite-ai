@@ -103,6 +103,36 @@ export function fromPrice(pricingOptions: string, basePriceFallback: number): nu
   return Math.min(...opts.map((o) => o.price));
 }
 
+// Map a YouTube or Vimeo URL to its embed form. Returns null for anything
+// else (file uploads, malformed URLs) so the caller can fall back to <video>.
+export function embedFromUrl(url: string): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    // YouTube — watch?v=ID, youtu.be/ID, or already-embed
+    if (u.hostname.endsWith("youtube.com")) {
+      if (u.pathname === "/watch") {
+        const id = u.searchParams.get("v");
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+      }
+      if (u.pathname.startsWith("/embed/")) return url;
+    }
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.slice(1);
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    // Vimeo — vimeo.com/ID or player.vimeo.com/video/ID
+    if (u.hostname === "vimeo.com") {
+      const id = u.pathname.replace(/^\//, "").split("/")[0];
+      return /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
+    }
+    if (u.hostname === "player.vimeo.com") return url;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export const fmt = (n: number) => "$" + Math.round(n).toLocaleString();
 
 // JSON-in-text helpers (keeps the schema portable to Postgres later)

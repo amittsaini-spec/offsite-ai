@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { VENUE_TYPES } from "@/lib/data";
 import { createVenueAction } from "@/lib/actions";
 import PricingOptionsEditor from "@/app/admin/_components/PricingOptionsEditor";
+import VenueMediaEditor from "@/app/admin/_components/VenueMediaEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,14 @@ export default async function NewVenue({
           Define one or more booking options. Guests pick one at checkout.
         </div>
         <PricingOptionsEditor initial={[]} />
+
+        <div className="fsec" style={{ marginTop: 28 }}>Photos</div>
+        <VenueMediaEditor
+          initialPhotos={[]}
+          initialVideoUrl=""
+          initialTourUrl=""
+          initialFloorPlans={[]}
+        />
 
         <div className="field">
           <label>Tags (comma separated)</label>

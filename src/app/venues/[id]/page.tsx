@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { gradFor, parseArray, parseObj, parsePricingOptions } from "@/lib/data";
+import { gradFor, parseArray, parseObj, parsePricingOptions, embedFromUrl } from "@/lib/data";
 import SiteNav from "../../_components/SiteNav";
 import BookingForm from "./BookingForm";
 
@@ -28,7 +28,10 @@ export default async function VenueDetail({
   const layouts = parseObj(v!.layouts) as Record<string, number>;
   const rules = parseObj(v!.rules) as Record<string, string>;
   const pricingOptions = parsePricingOptions(v!.pricingOptions);
+  const photos = parseArray(v!.photos);
+  const floorPlans = parseArray(v!.floorPlans);
   const grad = gradFor(v!.type);
+  const embed = embedFromUrl(v!.videoUrl);
   // Shortest available block, used in the "scheduling" fact card.
   const shortestHours = pricingOptions.length
     ? Math.min(...pricingOptions.map((o) => o.durationHours).filter((h) => h > 0))
@@ -52,18 +55,83 @@ export default async function VenueDetail({
         </div>
 
         <div className="dgallery">
-          <div style={{ background: grad }}>
-            <span className="gtag">◎ Launch 360° virtual tour</span>
+          {/* Cover slot: real photo or fallback gradient with the 360 CTA on top */}
+          <div
+            style={{
+              background: grad,
+              backgroundImage: photos[0] ? `url(${photos[0]})` : grad,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              position: "relative",
+            }}
+          >
+            {v!.tourUrl && (
+              <a
+                href={v!.tourUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="gtag"
+                style={{ background: "rgba(0,0,0,.55)", color: "#fff", border: "none" }}
+              >
+                ◎ Launch 360° virtual tour
+              </a>
+            )}
           </div>
-          <div style={{ background: grad, filter: "hue-rotate(12deg) brightness(1.05)" }} />
-          <div style={{ background: grad, filter: "hue-rotate(-14deg) brightness(.92)" }} />
-          <div style={{ background: grad, filter: "saturate(1.3) brightness(1.08)" }}>
-            <span className="gtag">Layout renderings</span>
-          </div>
-          <div style={{ background: grad, filter: "hue-rotate(20deg) brightness(.96)" }}>
-            <span className="gtag">+ photos</span>
-          </div>
+
+          {/* Up to 4 supporting cells: extra photos, then floor plans, then nothing */}
+          {[1, 2, 3, 4].map((i) => {
+            const photo = photos[i];
+            const floor = floorPlans[i - 1 - Math.max(photos.length - 1, 0)];
+            const src = photo ?? floor;
+            const isFloor = !photo && !!floor;
+            return (
+              <div
+                key={i}
+                style={{
+                  background: grad,
+                  backgroundImage: src ? `url(${src})` : grad,
+                  backgroundSize: isFloor ? "contain" : "cover",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  filter: src ? undefined : `hue-rotate(${i * 11}deg)`,
+                }}
+              >
+                {isFloor && <span className="gtag">Layout renderings</span>}
+              </div>
+            );
+          })}
         </div>
+
+        {(embed || (v!.videoUrl && /\.(mp4|webm|mov)(\?|$)/i.test(v!.videoUrl))) && (
+          <div className="dsec" style={{ borderTop: "1px solid var(--line)" }}>
+            <h3>Video tour</h3>
+            {embed ? (
+              <div
+                style={{
+                  position: "relative",
+                  paddingBottom: "56.25%",
+                  height: 0,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  border: "1px solid var(--line)",
+                }}
+              >
+                <iframe
+                  src={embed}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+                />
+              </div>
+            ) : (
+              <video
+                src={v!.videoUrl}
+                controls
+                style={{ width: "100%", borderRadius: 14, border: "1px solid var(--line)" }}
+              />
+            )}
+          </div>
+        )}
 
         <div className="dwrap">
           <div>

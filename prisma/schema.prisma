@@ -71,6 +71,12 @@ model Venue {
   layouts        String @default("{}")  // JSON object { Ceremony: 200, ... }
   rules          String @default("{}")  // JSON object { cancel, time, catering, min }
   pricingOptions String @default("[]")  // JSON array of { label, durationHours, price }
+
+  // Media (Phase 4)
+  photos         String @default("[]")  // JSON array of URLs; index 0 is cover
+  videoUrl       String @default("")    // Vercel Blob URL or YouTube/Vimeo embed URL
+  tourUrl        String @default("")    // Matterport / 360° URL
+  floorPlans     String @default("[]")  // JSON array of URLs
   createdAt   DateTime @default(now())
   bookings    BookingRequest[]
 }

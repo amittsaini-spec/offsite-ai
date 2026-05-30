@@ -10,6 +10,8 @@ type V = {
   basePrice: number;
   pricingOptions: string;
   tags: string;
+  photos: string;
+  tourUrl: string;
   hotel: { name: string; city: string };
 };
 
@@ -17,15 +19,24 @@ export default function VenueCard({ v }: { v: V }) {
   const tags = parseArray(v.tags);
   const hot = tags.includes("Hot Pick");
   const startPrice = fromPrice(v.pricingOptions, v.basePrice);
+  const cover = parseArray(v.photos)[0];
   return (
     <Link href={`/venues/${v.id}`} className="card">
-      <div className="cmedia" style={{ background: gradFor(v.type) }}>
+      <div
+        className="cmedia"
+        style={{
+          background: gradFor(v.type),
+          backgroundImage: cover ? `url(${cover})` : gradFor(v.type),
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
         {hot ? (
           <span className="ctag hot">🔥 Hot Pick</span>
         ) : (
           <span className="ctag">{v.type}</span>
         )}
-        <span className="c360">◎ 360° tour</span>
+        {v.tourUrl && <span className="c360">◎ 360° tour</span>}
       </div>
       <div className="cbody">
         <div className="crow">

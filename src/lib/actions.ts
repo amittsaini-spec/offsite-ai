@@ -29,6 +29,19 @@ function floatOrNull(fd: FormData, key: string): number | null {
 function multi(fd: FormData, key: string): string[] {
   return fd.getAll(key).map((v) => v.toString().trim()).filter(Boolean);
 }
+// Strict URL-array parser for media fields posted as a JSON string.
+function urlArray(fd: FormData, key: string): string[] {
+  const raw = (fd.get(key) ?? "").toString().trim();
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v)
+      ? v.map((s) => String(s ?? "").trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
 function lines(fd: FormData, key: string) {
   return str(fd, key)
     .split("\n")
@@ -201,6 +214,10 @@ export async function createVenueAction(formData: FormData) {
       layouts: JSON.stringify(layouts),
       rules: JSON.stringify(rules),
       pricingOptions: JSON.stringify(pricingOptions),
+      photos: JSON.stringify(urlArray(formData, "photos")),
+      videoUrl: str(formData, "videoUrl"),
+      tourUrl: str(formData, "tourUrl"),
+      floorPlans: JSON.stringify(urlArray(formData, "floorPlans")),
     },
   });
   revalidatePath("/admin");
@@ -247,6 +264,10 @@ export async function updateVenueAction(formData: FormData) {
       layouts: JSON.stringify(layouts),
       rules: JSON.stringify(rules),
       pricingOptions: JSON.stringify(pricingOptions),
+      photos: JSON.stringify(urlArray(formData, "photos")),
+      videoUrl: str(formData, "videoUrl"),
+      tourUrl: str(formData, "tourUrl"),
+      floorPlans: JSON.stringify(urlArray(formData, "floorPlans")),
     },
   });
 

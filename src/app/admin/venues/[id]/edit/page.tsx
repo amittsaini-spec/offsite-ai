@@ -5,6 +5,7 @@ import { VENUE_TYPES, parseArray, parseObj, parsePricingOptions } from "@/lib/da
 import { updateVenueAction, deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 import PricingOptionsEditor from "@/app/admin/_components/PricingOptionsEditor";
+import VenueMediaEditor from "@/app/admin/_components/VenueMediaEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ export default async function EditVenue({
   const layouts = parseObj(venue!.layouts) as Record<string, number>;
   const rules = parseObj(venue!.rules) as Record<string, string>;
   const pricingOptions = parsePricingOptions(venue!.pricingOptions);
+  const photos = parseArray(venue!.photos);
+  const floorPlans = parseArray(venue!.floorPlans);
 
   return (
     <>
@@ -136,6 +139,14 @@ export default async function EditVenue({
           Define one or more booking options. Guests pick one at checkout.
         </div>
         <PricingOptionsEditor initial={pricingOptions} />
+
+        <div className="fsec" style={{ marginTop: 28 }}>Photos</div>
+        <VenueMediaEditor
+          initialPhotos={photos}
+          initialVideoUrl={venue!.videoUrl}
+          initialTourUrl={venue!.tourUrl}
+          initialFloorPlans={floorPlans}
+        />
 
         <div className="field">
           <label>Tags (comma separated)</label>
