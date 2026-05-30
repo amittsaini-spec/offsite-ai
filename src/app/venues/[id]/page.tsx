@@ -10,6 +10,7 @@ import {
   embedFromUrl,
   eventsForType,
   isIndoor,
+  BLOCKING_STATUSES,
 } from "@/lib/data";
 import SiteNav from "../../_components/SiteNav";
 import BookingForm from "./BookingForm";
@@ -33,7 +34,7 @@ export default async function VenueDetail({
     include: {
       hotel: true,
       bookings: {
-        where: { status: "CONFIRMED" },
+        where: { status: { in: BLOCKING_STATUSES } },
         select: { eventDate: true },
       },
     },

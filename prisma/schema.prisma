@@ -98,6 +98,13 @@ model BookingRequest {
   serviceFee Int      @default(0)
   depositDue Int      @default(0)
   total      Int      @default(0)
-  status     String   @default("REQUESTED") // REQUESTED | CONFIRMED | DECLINED
+  // REQUESTED | CONFIRMED | DEPOSIT_HELD | COMPLETED | DECLINED | CANCELLED
+  status     String   @default("REQUESTED")
+  // Internal notes — JSON array of { author, text, at } for the ops timeline.
+  notes      String   @default("[]")
+  // Payouts (concierge-first; STRIPE SEAM lives in actions.markPayoutAction).
+  payoutStatus  String    @default("PENDING")  // PENDING | PAID
+  payoutPaidAt  DateTime?
+  payoutNote    String    @default("")
   createdAt  DateTime @default(now())
 }

@@ -1,36 +1,28 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { fmt } from "@/lib/data";
-import { deleteHotelAction } from "@/lib/actions";
-import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
+import { fmt, STATUS_PILL, STATUS_LABEL, type BookingStatus } from "@/lib/data";
+import { getDashboardStats, getMonthlyRevenue } from "@/lib/booking-stats";
+import RevenueChart from "./_components/RevenueChart";
+import StatusBreakdown from "./_components/StatusBreakdown";
 
 export const dynamic = "force-dynamic";
 
-export default async function Dashboard() {
-  const [hotels, venueCount, bookings] = await Promise.all([
-    prisma.hotel.findMany({
-      include: { _count: { select: { venues: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.venue.count(),
+export default async function Overview() {
+  const [stats, revenueSeries, recentBookings] = await Promise.all([
+    getDashboardStats(),
+    getMonthlyRevenue(6),
     prisma.bookingRequest.findMany({
       include: { venue: { include: { hotel: true } } },
       orderBy: { createdAt: "desc" },
-      take: 5,
+      take: 6,
     }),
   ]);
-
-  const pipeline = await prisma.bookingRequest.aggregate({
-    _sum: { total: true },
-    where: { status: { not: "DECLINED" } },
-  });
-  const requests = await prisma.bookingRequest.count({ where: { status: "REQUESTED" } });
 
   return (
     <>
       <div className="atop">
         <div>
-          <div className="ah1">Dashboard</div>
+          <div className="ah1">Overview</div>
           <div className="asub">Everything you manage on the hotels&apos; behalf.</div>
         </div>
         <Link href="/admin/hotels/new" className="btn-emerald">
@@ -38,97 +30,99 @@ export default async function Dashboard() {
         </Link>
       </div>
 
-      <div className="stats">
-        <div className="stat">
-          <div className="sn">{hotels.length}</div>
-          <div className="sl">Hotels</div>
+      {/* ── Headline KPIs ─────────────────────────────── */}
+      <div className="kgrid">
+        <Kpi
+          label="Venues live"
+          big={`${stats.liveVenues}`}
+          sub={`of ${stats.totalVenues} total across ${stats.hotelCount} hotels`}
+        />
+        <Kpi
+          label="Open requests"
+          big={`${stats.openRequests}`}
+          sub={`${stats.inProgress} in progress`}
+        />
+        <Kpi
+          label="Confirmed bookings"
+          big={`${stats.statusCounts.CONFIRMED + stats.statusCounts.DEPOSIT_HELD + stats.completed}`}
+          sub={`${stats.completed} completed`}
+        />
+        <Kpi
+          label="Conversion"
+          big={`${Math.round(stats.conversionRate * 100)}%`}
+          sub="of non-cancelled leads"
+        />
+      </div>
+
+      <div className="kgrid">
+        <Kpi label="Pipeline value" big={fmt(stats.pipelineValue)} sub="REQUESTED + CONFIRMED + DEPOSIT_HELD" money />
+        <Kpi label="Realized gross" big={fmt(stats.realizedGross)} sub="Net to hotels (COMPLETED)" money />
+        <Kpi label="Offsite take" big={fmt(stats.realizedTake)} sub="12% service fee (COMPLETED)" money />
+        <Kpi
+          label="Cancellations"
+          big={`${stats.statusCounts.DECLINED + stats.statusCounts.CANCELLED}`}
+          sub={`${stats.statusCounts.DECLINED} declined · ${stats.statusCounts.CANCELLED} cancelled`}
+        />
+      </div>
+
+      {/* ── Charts ──────────────────────────────────────── */}
+      <div className="chartrow">
+        <div className="chartwrap">
+          <h3>Revenue (last 6 months)</h3>
+          <div className="sub">Gross volume and Offsite take per month, from COMPLETED bookings.</div>
+          <RevenueChart data={revenueSeries} />
         </div>
-        <div className="stat">
-          <div className="sn">{venueCount}</div>
-          <div className="sl">Venues live</div>
-        </div>
-        <div className="stat">
-          <div className="sn">{requests}</div>
-          <div className="sl">Open requests</div>
-        </div>
-        <div className="stat">
-          <div className="sn">{fmt(pipeline._sum.total || 0)}</div>
-          <div className="sl">Pipeline value</div>
+        <div className="chartwrap">
+          <h3>Bookings by status</h3>
+          <div className="sub">All bookings ever, by their current status.</div>
+          <StatusBreakdown counts={stats.statusCounts} />
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 22 }}>
-        <div className="panel">
-          <h3>Hotels</h3>
-          {hotels.length === 0 ? (
-            <div className="empty">
-              No hotels yet.{" "}
-              <Link href="/admin/hotels/new" style={{ color: "var(--emerald)", fontWeight: 600 }}>
-                Create the first one →
-              </Link>
-            </div>
-          ) : (
-            hotels.map((h) => (
-              <div key={h.id} className="trow">
-                <Link
-                  href={`/admin/hotels/${h.id}`}
-                  style={{ flex: 1, display: "block" }}
-                >
-                  <div className="tmain">{h.name}</div>
-                  <div className="tsub">{h.city}</div>
-                </Link>
-                <div
-                  className="tsp tsub"
-                  style={{ display: "flex", alignItems: "center", gap: 10 }}
-                >
-                  <span>{h._count.venues} venues</span>
-                  <Link
-                    href={`/admin/hotels/${h.id}/edit`}
-                    className="pill draft"
-                    style={{ textTransform: "uppercase" }}
-                  >
-                    Edit
-                  </Link>
-                  <ConfirmDeleteButton
-                    action={deleteHotelAction}
-                    id={h.id}
-                    confirmText={`Delete "${h.name}" and ALL of its venues and bookings? This cannot be undone.`}
-                    className="pill no"
-                  >
-                    Delete
-                  </ConfirmDeleteButton>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="panel">
-          <h3>Recent requests</h3>
-          {bookings.length === 0 ? (
-            <div className="empty">No requests yet.</div>
-          ) : (
-            bookings.map((b) => (
-              <div key={b.id} className="trow">
+      {/* ── Recent bookings ────────────────────────────── */}
+      <div className="panel">
+        <h3>Recent bookings</h3>
+        {recentBookings.length === 0 ? (
+          <div className="empty">No bookings yet.</div>
+        ) : (
+          recentBookings.map((b) => {
+            const status = b.status as BookingStatus;
+            return (
+              <Link key={b.id} href={`/admin/bookings/${b.id}`} className="trow">
                 <div>
                   <div className="tmain">{b.venue.name}</div>
                   <div className="tsub">
-                    {b.guestName} · {fmt(b.total)}
+                    {b.guestName} · {fmt(b.total)} · {b.eventDate || "no date"}
                   </div>
                 </div>
-                <span
-                  className={
-                    "tsp pill " +
-                    (b.status === "CONFIRMED" ? "ok" : b.status === "DECLINED" ? "no" : "req")
-                  }
-                >
-                  {b.status}
+                <span className={"tsp pill " + (STATUS_PILL[status] ?? "draft")}>
+                  {STATUS_LABEL[status] ?? b.status}
                 </span>
-              </div>
-            ))
-          )}
-        </div>
+              </Link>
+            );
+          })
+        )}
       </div>
     </>
+  );
+}
+
+function Kpi({
+  label,
+  big,
+  sub,
+  money,
+}: {
+  label: string;
+  big: string;
+  sub: string;
+  money?: boolean;
+}) {
+  return (
+    <div className={"stat" + (money ? " kpi-money" : "")}>
+      <div className="sn">{big}</div>
+      <div className="sl">{label}</div>
+      <div className="ss">{sub}</div>
+    </div>
   );
 }

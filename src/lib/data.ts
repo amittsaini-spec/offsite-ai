@@ -76,6 +76,81 @@ export function gradFor(type: string) {
 
 export const SERVICE_FEE_PCT = 0.12; // Offsite take rate shown to guests
 
+// ─── Booking workflow ─────────────────────────────────────────
+// Single source of truth for the state machine. Validates transitions on
+// the server (in setBookingStatusAction) and drives the action buttons on
+// the booking detail page.
+export const BOOKING_STATUSES = [
+  "REQUESTED",
+  "CONFIRMED",
+  "DEPOSIT_HELD",
+  "COMPLETED",
+  "DECLINED",
+  "CANCELLED",
+] as const;
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
+// Forward-only happy path with cancel branches at any in-progress state.
+// Terminal states (COMPLETED, DECLINED, CANCELLED) cannot transition.
+export const STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  REQUESTED: ["CONFIRMED", "DECLINED"],
+  CONFIRMED: ["DEPOSIT_HELD", "CANCELLED"],
+  DEPOSIT_HELD: ["COMPLETED", "CANCELLED"],
+  COMPLETED: [],
+  DECLINED: [],
+  CANCELLED: [],
+};
+
+// Statuses that count as "the booking is locked" for the availability
+// calendar. Anything from CONFIRMED forward blocks a date for new guests.
+export const BLOCKING_STATUSES: BookingStatus[] = [
+  "CONFIRMED",
+  "DEPOSIT_HELD",
+  "COMPLETED",
+];
+
+// CSS pill class per status. Extends what's in globals.css; new classes
+// (.hold, .done, .cancel) are added in this phase.
+export const STATUS_PILL: Record<BookingStatus, string> = {
+  REQUESTED: "req",
+  CONFIRMED: "ok",
+  DEPOSIT_HELD: "hold",
+  COMPLETED: "done",
+  DECLINED: "no",
+  CANCELLED: "cancel",
+};
+
+export const STATUS_LABEL: Record<BookingStatus, string> = {
+  REQUESTED: "Requested",
+  CONFIRMED: "Confirmed",
+  DEPOSIT_HELD: "Deposit held",
+  COMPLETED: "Completed",
+  DECLINED: "Declined",
+  CANCELLED: "Cancelled",
+};
+
+export function canTransition(from: string, to: string): boolean {
+  return (STATUS_TRANSITIONS as Record<string, string[]>)[from]?.includes(to) ?? false;
+}
+
+// ─── Notes (JSON-on-text on BookingRequest) ───────────────────
+export type BookingNote = { author: string; text: string; at: string };
+export function parseNotes(s: string): BookingNote[] {
+  try {
+    const v = JSON.parse(s);
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((n) => ({
+        author: String(n?.author ?? "").trim(),
+        text: String(n?.text ?? "").trim(),
+        at: String(n?.at ?? "").trim(),
+      }))
+      .filter((n) => n.text.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 // Owner-defined pricing. Each venue has 1..N options.
 export type PricingOption = {
   label: string;

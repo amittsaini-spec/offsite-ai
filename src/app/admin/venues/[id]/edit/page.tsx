@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { VENUE_TYPES, parseArray, parseObj, parsePricingOptions, parseDateArray } from "@/lib/data";
+import {
+  VENUE_TYPES,
+  parseArray,
+  parseObj,
+  parsePricingOptions,
+  parseDateArray,
+  BLOCKING_STATUSES,
+} from "@/lib/data";
 import { updateVenueAction, deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 import PricingOptionsEditor from "@/app/admin/_components/PricingOptionsEditor";
@@ -21,7 +28,7 @@ export default async function EditVenue({
     include: {
       hotel: true,
       bookings: {
-        where: { status: "CONFIRMED" },
+        where: { status: { in: BLOCKING_STATUSES } },
         select: { eventDate: true },
       },
     },

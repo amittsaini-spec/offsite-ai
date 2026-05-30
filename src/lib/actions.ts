@@ -2,7 +2,13 @@
 
 import { prisma } from "./db";
 import { createSession, destroySession, getCurrentUser } from "./auth";
-import { quote, parsePricingOptions } from "./data";
+import {
+  quote,
+  parsePricingOptions,
+  canTransition,
+  parseNotes,
+  BLOCKING_STATUSES,
+} from "./data";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -172,11 +178,11 @@ export async function deleteHotelAction(formData: FormData) {
   const id = str(formData, "id");
   if (!id) redirect("/admin");
 
-  // Guard: refuse if any venue under this hotel has a CONFIRMED booking.
-  const confirmedCount = await prisma.bookingRequest.count({
-    where: { status: "CONFIRMED", venue: { hotelId: id } },
+  // Guard: refuse if any venue under this hotel has a non-terminal locked booking.
+  const blockedCount = await prisma.bookingRequest.count({
+    where: { status: { in: BLOCKING_STATUSES }, venue: { hotelId: id } },
   });
-  if (confirmedCount > 0) {
+  if (blockedCount > 0) {
     redirect(`/admin/hotels/${id}?error=hotel-has-confirmed-bookings`);
   }
 
@@ -311,11 +317,11 @@ export async function deleteVenueAction(formData: FormData) {
   });
   if (!venue) redirect("/admin");
 
-  // Guard: refuse if any CONFIRMED bookings exist on this venue.
-  const confirmedCount = await prisma.bookingRequest.count({
-    where: { venueId: id, status: "CONFIRMED" },
+  // Guard: refuse if any non-terminal locked booking exists on this venue.
+  const blockedCount = await prisma.bookingRequest.count({
+    where: { venueId: id, status: { in: BLOCKING_STATUSES } },
   });
-  if (confirmedCount > 0) {
+  if (blockedCount > 0) {
     redirect(`/admin/hotels/${venue!.hotelId}?error=venue-has-confirmed-bookings`);
   }
 
@@ -370,16 +376,62 @@ export async function createBookingAction(formData: FormData) {
 export async function setBookingStatusAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
   const id = str(formData, "id");
-  const status = str(formData, "status");
-  const updated = await prisma.bookingRequest.update({
+  const nextStatus = str(formData, "status");
+
+  // Validate the transition is allowed by the workflow state machine.
+  // Loads the current status first so we can refuse illegal moves cleanly.
+  const current = await prisma.bookingRequest.findUnique({
     where: { id },
-    data: { status },
-    select: { venueId: true },
+    select: { status: true, venueId: true },
   });
-  // Status flips affect public availability (CONFIRMED dates become unselectable),
-  // so refresh the venue's public page and the admin views too.
-  revalidatePath("/admin/bookings");
-  revalidatePath(`/venues/${updated.venueId}`);
+  if (!current) redirect("/admin/bookings");
+  if (!canTransition(current!.status, nextStatus)) {
+    redirect(`/admin/bookings/${id}?error=invalid-transition`);
+  }
+
+  await prisma.bookingRequest.update({
+    where: { id },
+    data: { status: nextStatus },
+  });
+
+  // Status flips can move dates onto/off the unavailable list — refresh
+  // every surface that reads availability.
   revalidatePath("/admin");
+  revalidatePath("/admin/bookings");
+  revalidatePath(`/admin/bookings/${id}`);
+  revalidatePath("/admin/availability");
+  revalidatePath(`/venues/${current!.venueId}`);
+  redirect(`/admin/bookings/${id}`);
+}
+
+export async function addBookingNoteAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  const text = str(formData, "text");
+  if (!id || !text) redirect(`/admin/bookings/${id}`);
+
+  const current = await prisma.bookingRequest.findUnique({
+    where: { id },
+    select: { notes: true },
+  });
+  if (!current) redirect("/admin/bookings");
+
+  const notes = parseNotes(current!.notes);
+  notes.push({
+    author: user!.name || user!.email,
+    text,
+    at: new Date().toISOString(),
+  });
+
+  await prisma.bookingRequest.update({
+    where: { id },
+    data: { notes: JSON.stringify(notes) },
+  });
+
+  revalidatePath(`/admin/bookings/${id}`);
+  redirect(`/admin/bookings/${id}`);
 }
