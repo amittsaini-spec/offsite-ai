@@ -14,6 +14,21 @@ function int(fd: FormData, key: string) {
   const n = parseInt((fd.get(key) ?? "").toString(), 10);
   return Number.isFinite(n) ? n : 0;
 }
+function intOrNull(fd: FormData, key: string): number | null {
+  const raw = (fd.get(key) ?? "").toString().trim();
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+function floatOrNull(fd: FormData, key: string): number | null {
+  const raw = (fd.get(key) ?? "").toString().trim();
+  if (!raw) return null;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+function multi(fd: FormData, key: string): string[] {
+  return fd.getAll(key).map((v) => v.toString().trim()).filter(Boolean);
+}
 function lines(fd: FormData, key: string) {
   return str(fd, key)
     .split("\n")
@@ -62,9 +77,21 @@ export async function createHotelAction(formData: FormData) {
   const hotel = await prisma.hotel.create({
     data: {
       name: str(formData, "name"),
-      city: str(formData, "city"),
-      zone: str(formData, "zone"),
+      brand: str(formData, "brand"),
       description: str(formData, "description"),
+      address: str(formData, "address"),
+      city: str(formData, "city"),
+      region: str(formData, "region"),
+      country: str(formData, "country"),
+      zone: str(formData, "zone"),
+      latitude: floatOrNull(formData, "latitude"),
+      longitude: floatOrNull(formData, "longitude"),
+      contactName: str(formData, "contactName"),
+      contactEmail: str(formData, "contactEmail"),
+      contactPhone: str(formData, "contactPhone"),
+      website: str(formData, "website"),
+      amenities: JSON.stringify(multi(formData, "amenities")),
+      starRating: intOrNull(formData, "starRating"),
       createdById: user!.id,
     },
   });
@@ -83,9 +110,21 @@ export async function updateHotelAction(formData: FormData) {
     where: { id },
     data: {
       name: str(formData, "name"),
-      city: str(formData, "city"),
-      zone: str(formData, "zone"),
+      brand: str(formData, "brand"),
       description: str(formData, "description"),
+      address: str(formData, "address"),
+      city: str(formData, "city"),
+      region: str(formData, "region"),
+      country: str(formData, "country"),
+      zone: str(formData, "zone"),
+      latitude: floatOrNull(formData, "latitude"),
+      longitude: floatOrNull(formData, "longitude"),
+      contactName: str(formData, "contactName"),
+      contactEmail: str(formData, "contactEmail"),
+      contactPhone: str(formData, "contactPhone"),
+      website: str(formData, "website"),
+      amenities: JSON.stringify(multi(formData, "amenities")),
+      starRating: intOrNull(formData, "starRating"),
     },
   });
 

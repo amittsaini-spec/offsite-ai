@@ -1,11 +1,37 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { fmt, gradFor, fromPrice } from "@/lib/data";
+import { fmt, gradFor, fromPrice, parseArray } from "@/lib/data";
 import { deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 
 export const dynamic = "force-dynamic";
+
+function ProfileField({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: ".04em",
+          textTransform: "uppercase",
+          color: "var(--muted)",
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 14.5, color: "var(--ink)" }}>{value}</div>
+    </div>
+  );
+}
 
 const ERROR_MESSAGES: Record<string, string> = {
   "hotel-has-confirmed-bookings":
@@ -30,6 +56,7 @@ export default async function HotelDetail({
   if (!hotel) notFound();
 
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
+  const amenities = parseArray(hotel!.amenities);
 
   return (
     <>
@@ -71,10 +98,87 @@ export default async function HotelDetail({
       </div>
 
       {hotel!.description && (
-        <p style={{ color: "var(--ink-2)", maxWidth: 620, marginBottom: 26 }}>
+        <p style={{ color: "var(--ink-2)", maxWidth: 620, marginTop: 14, marginBottom: 18 }}>
           {hotel!.description}
         </p>
       )}
+
+      <div className="panel" style={{ marginBottom: 22 }}>
+        <h3>Profile</h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: 18,
+            padding: "18px 20px",
+          }}
+        >
+          {hotel!.brand && <ProfileField label="Brand" value={hotel!.brand} />}
+          {hotel!.starRating && (
+            <ProfileField label="Rating" value={`${hotel!.starRating} stars`} />
+          )}
+          {hotel!.address && <ProfileField label="Address" value={hotel!.address} />}
+          {(hotel!.region || hotel!.country) && (
+            <ProfileField
+              label="Region · Country"
+              value={[hotel!.region, hotel!.country].filter(Boolean).join(" · ")}
+            />
+          )}
+          {hotel!.latitude != null && hotel!.longitude != null && (
+            <ProfileField
+              label="Coordinates"
+              value={`${hotel!.latitude.toFixed(4)}, ${hotel!.longitude.toFixed(4)}`}
+            />
+          )}
+          {hotel!.contactName && (
+            <ProfileField label="Contact" value={hotel!.contactName} />
+          )}
+          {hotel!.contactEmail && (
+            <ProfileField label="Email" value={hotel!.contactEmail} />
+          )}
+          {hotel!.contactPhone && (
+            <ProfileField label="Phone" value={hotel!.contactPhone} />
+          )}
+          {hotel!.website && (
+            <ProfileField
+              label="Website"
+              value={
+                <a
+                  href={hotel!.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--emerald)" }}
+                >
+                  {hotel!.website.replace(/^https?:\/\//, "")} ↗
+                </a>
+              }
+            />
+          )}
+        </div>
+        {amenities.length > 0 && (
+          <div style={{ padding: "0 20px 20px" }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: ".04em",
+                textTransform: "uppercase",
+                color: "var(--muted)",
+                marginBottom: 8,
+              }}
+            >
+              Amenities
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {amenities.map((a) => (
+                <span key={a} className="pill draft">
+                  {a}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="panel">
         <h3>Venues ({hotel!.venues.length})</h3>

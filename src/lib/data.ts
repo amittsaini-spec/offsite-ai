@@ -1,5 +1,25 @@
 // Shared constants + pure helpers used across server and client components.
 
+// Curated list of hotel amenities for the multi-select on the hotel profile.
+export const AMENITIES = [
+  "WiFi",
+  "Pool",
+  "Spa",
+  "Gym",
+  "Restaurant",
+  "Bar",
+  "Beach Access",
+  "Valet Parking",
+  "Concierge",
+  "Room Service",
+  "Airport Shuttle",
+  "Pet-Friendly",
+  "ADA Accessible",
+  "Air Conditioning",
+  "Business Center",
+  "Conference Rooms",
+] as const;
+
 export const VENUE_TYPES = [
   "Garden",
   "Beachfront",
