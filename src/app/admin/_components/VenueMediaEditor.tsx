@@ -8,6 +8,41 @@ import { upload } from "@vercel/blob/client";
 // flag set at build time so the UI knows whether to expose the upload UI.
 const BLOB_READY = process.env.NEXT_PUBLIC_BLOB_READY === "true";
 
+// Formats we route through the server-side transcoder so the stored blob is
+// always a JPEG that displays in every browser.
+const CONVERT_RE = /^image\/(heic|heif|avif)$/i;
+const CONVERT_EXT = /\.(heic|heif|avif)$/i;
+
+// One uploader for both photo + floor-plan grids. HEIC/HEIF/AVIF take the
+// server-proxied transcode path; everything else uses the existing
+// client-direct Vercel Blob flow.
+async function uploadOne(file: File, pathPrefix: string): Promise<string> {
+  const needsConvert =
+    CONVERT_RE.test(file.type || "") || CONVERT_EXT.test(file.name);
+
+  if (needsConvert) {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("pathPrefix", pathPrefix);
+    const res = await fetch("/api/transcode-upload", {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      const e = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(e.error || "Transcode upload failed");
+    }
+    const json = (await res.json()) as { url: string };
+    return json.url;
+  }
+
+  const blob = await upload(`${pathPrefix}/${Date.now()}-${file.name}`, file, {
+    access: "public",
+    handleUploadUrl: "/api/upload",
+  });
+  return blob.url;
+}
+
 type VideoMode = "upload" | "embed";
 
 export default function VenueMediaEditor({
@@ -136,11 +171,8 @@ function PhotoGrid({
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const blob = await upload(`venues/photos/${Date.now()}-${file.name}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        });
-        uploaded.push(blob.url);
+        const url = await uploadOne(file, "venues/photos");
+        uploaded.push(url);
       }
       setPhotos([...photos, ...uploaded]);
     } catch (e) {
@@ -399,11 +431,8 @@ function FloorPlanGrid({
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const blob = await upload(`venues/floorplans/${Date.now()}-${file.name}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-        });
-        uploaded.push(blob.url);
+        const url = await uploadOne(file, "venues/floorplans");
+        uploaded.push(url);
       }
       setPlans([...plans, ...uploaded]);
     } catch (e) {
