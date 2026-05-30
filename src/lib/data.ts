@@ -46,6 +46,19 @@ export const EVENT_TYPE_MATCH: Record<string, string[]> = {
   Social: ["Rooftop", "Poolside", "Garden"],
 };
 
+// Inverse of EVENT_TYPE_MATCH — given a venue type, which event categories
+// does it support? Used by the public detail page's highlight chips.
+export function eventsForType(type: string): string[] {
+  return EVENT_TYPES.filter((e) => EVENT_TYPE_MATCH[e]?.includes(type));
+}
+
+// Indoor/outdoor classification per venue type. Ballroom and Chapel are
+// indoor; the rest are outdoor or semi-outdoor (Cenote = open cenote pool).
+const INDOOR_TYPES = new Set(["Ballroom", "Chapel"]);
+export function isIndoor(type: string): boolean {
+  return INDOOR_TYPES.has(type);
+}
+
 export const GRADIENTS: Record<string, string> = {
   Garden: "linear-gradient(150deg,#14533b,#3c7a52 45%,#c4a14a)",
   Beachfront: "linear-gradient(150deg,#0e5d63,#3aa0a8 50%,#e7d3a8)",

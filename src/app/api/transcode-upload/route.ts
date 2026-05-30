@@ -48,7 +48,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   const mime = (file.type || "").toLowerCase();
   const needsConvert = CONVERT_MIME.has(mime) || CONVERT_EXT.test(file.name);
 
-  let buffer = Buffer.from(await file.arrayBuffer());
+  let buffer: Buffer = Buffer.from(await file.arrayBuffer());
   let outName = file.name;
   let contentType = file.type || "application/octet-stream";
 
@@ -63,8 +63,12 @@ export async function POST(req: Request): Promise<NextResponse> {
       } else {
         // HEIC/HEIF — pure-JS so it works on Vercel's Linux runtime where
         // sharp's HEIF support is not included in the prebuilt binary.
+        const ab = buffer.buffer.slice(
+          buffer.byteOffset,
+          buffer.byteOffset + buffer.byteLength,
+        );
         const out = await convert({
-          buffer: new Uint8Array(buffer),
+          buffer: ab,
           format: "JPEG",
           quality: 0.9,
         });

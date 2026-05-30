@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { gradFor, parseArray, parseObj, parsePricingOptions, embedFromUrl } from "@/lib/data";
+import {
+  gradFor,
+  parseArray,
+  parseObj,
+  parsePricingOptions,
+  embedFromUrl,
+  eventsForType,
+  isIndoor,
+} from "@/lib/data";
 import SiteNav from "../../_components/SiteNav";
 import BookingForm from "./BookingForm";
+import PhotoGallery from "./PhotoGallery";
+import HotelMap from "./HotelMap";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +42,16 @@ export default async function VenueDetail({
   const floorPlans = parseArray(v!.floorPlans);
   const grad = gradFor(v!.type);
   const embed = embedFromUrl(v!.videoUrl);
-  // Shortest available block, used in the "scheduling" fact card.
   const shortestHours = pricingOptions.length
     ? Math.min(...pricingOptions.map((o) => o.durationHours).filter((h) => h > 0))
     : 0;
+
+  const events = eventsForType(v!.type);
+  const indoorOutdoor = isIndoor(v!.type) ? "Indoor" : "Outdoor";
+
+  // Map only renders when both coordinates are present.
+  const hasCoords =
+    typeof v!.hotel.latitude === "number" && typeof v!.hotel.longitude === "number";
 
   return (
     <>
@@ -54,53 +70,50 @@ export default async function VenueDetail({
           )}
         </div>
 
-        <div className="dgallery">
-          {/* Cover slot: real photo or fallback gradient with the 360 CTA on top */}
-          <div
-            style={{
-              background: grad,
-              backgroundImage: photos[0] ? `url(${photos[0]})` : grad,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              position: "relative",
-            }}
-          >
-            {v!.tourUrl && (
-              <a
-                href={v!.tourUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="gtag"
-                style={{ background: "rgba(0,0,0,.55)", color: "#fff", border: "none" }}
-              >
-                ◎ Launch 360° virtual tour
-              </a>
-            )}
-          </div>
-
-          {/* Up to 4 supporting cells: extra photos, then floor plans, then nothing */}
-          {[1, 2, 3, 4].map((i) => {
-            const photo = photos[i];
-            const floor = floorPlans[i - 1 - Math.max(photos.length - 1, 0)];
-            const src = photo ?? floor;
-            const isFloor = !photo && !!floor;
-            return (
-              <div
-                key={i}
-                style={{
-                  background: grad,
-                  backgroundImage: src ? `url(${src})` : grad,
-                  backgroundSize: isFloor ? "contain" : "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
-                  filter: src ? undefined : `hue-rotate(${i * 11}deg)`,
-                }}
-              >
-                {isFloor && <span className="gtag">Layout renderings</span>}
-              </div>
-            );
-          })}
+        {/* Highlight chips: capacity, event categories, indoor/outdoor */}
+        <div className="vchips">
+          <span className="vchip emerald">
+            <span className="vcdot" /> Up to {v!.standing.toLocaleString()} guests
+          </span>
+          {events.map((e) => (
+            <span key={e} className="vchip">
+              {e}
+            </span>
+          ))}
+          <span className="vchip">{indoorOutdoor}</span>
+          {tags
+            .filter((t) => t !== "Hot Pick")
+            .slice(0, 3)
+            .map((t) => (
+              <span key={t} className="vchip">
+                {t}
+              </span>
+            ))}
         </div>
+
+        <PhotoGallery
+          photos={photos}
+          floorPlans={floorPlans}
+          tourUrl={v!.tourUrl}
+          fallbackGradient={grad}
+        />
+
+        {v!.tourUrl && (
+          <div id="tour" className="dsec" style={{ borderTop: "1px solid var(--line)", scrollMarginTop: 100 }}>
+            <h3>Virtual tour</h3>
+            <div className="tour-frame">
+              <iframe
+                src={v!.tourUrl}
+                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
+                allowFullScreen
+                title={`${v!.name} virtual tour`}
+              />
+            </div>
+            <a href={v!.tourUrl} target="_blank" rel="noreferrer" className="tour-link">
+              Open tour in a new tab ↗
+            </a>
+          </div>
+        )}
 
         {(embed || (v!.videoUrl && /\.(mp4|webm|mov)(\?|$)/i.test(v!.videoUrl))) && (
           <div className="dsec" style={{ borderTop: "1px solid var(--line)" }}>
@@ -206,6 +219,24 @@ export default async function VenueDetail({
               </div>
             )}
 
+            {hasCoords && (
+              <div className="dsec">
+                <h3>Where you&apos;ll be</h3>
+                <div className="maddr">
+                  {v!.hotel.address || v!.hotel.city}
+                  {v!.hotel.region ? `, ${v!.hotel.region}` : ""}
+                  {v!.hotel.country ? `, ${v!.hotel.country}` : ""}
+                </div>
+                <div className="mapwrap">
+                  <HotelMap
+                    lat={v!.hotel.latitude as number}
+                    lng={v!.hotel.longitude as number}
+                    label={v!.hotel.name}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="dsec" style={{ borderBottom: "none" }}>
               <h3>Terms &amp; considerations</h3>
               {rules.cancel && (
@@ -250,7 +281,11 @@ export default async function VenueDetail({
                   ✓ Request sent. Your deposit holds the date while {v!.hotel.name} confirms
                   availability — Offsite only earns its fee once your booking clears.
                 </div>
-                <Link href={`/venues/${v!.id}`} className="btn-emerald" style={{ width: "100%", textAlign: "center" }}>
+                <Link
+                  href={`/venues/${v!.id}`}
+                  className="btn-emerald"
+                  style={{ width: "100%", textAlign: "center" }}
+                >
                   Make another request
                 </Link>
               </div>
