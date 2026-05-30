@@ -1,0 +1,74 @@
+// Offsite.ai data model.
+// SQLite for instant local dev. To go to production, change provider to
+// "postgresql" and DATABASE_URL — no code changes needed (JSON stored as text).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// DestaLabs team members who act as the agent managing all hotels.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("AGENT") // AGENT | ADMIN
+  createdAt    DateTime @default(now())
+  hotels       Hotel[]
+}
+
+model Hotel {
+  id          String   @id @default(cuid())
+  name        String
+  city        String
+  zone        String   @default("")
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdById String?
+  venues      Venue[]
+}
+
+model Venue {
+  id          String   @id @default(cuid())
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotelId     String
+  name        String
+  type        String   // Garden | Beachfront | Oceanfront | Ballroom | Rooftop | Poolside | Chapel | Cenote
+  description String   @default("")
+  sqft        Int      @default(0)
+  seated      Int      @default(0)
+  standing    Int      @default(0)
+  basePrice   Int      @default(0)   // price of a 4-hour block, whole dollars
+  depositPct  Int      @default(25)
+  status      String   @default("PUBLISHED") // DRAFT | PUBLISHED
+  tags        String   @default("[]")  // JSON array of strings
+  included    String   @default("[]")  // JSON array of strings
+  layouts     String   @default("{}")  // JSON object { Ceremony: 200, ... }
+  rules       String   @default("{}")  // JSON object { cancel, time, catering, min }
+  createdAt   DateTime @default(now())
+  bookings    BookingRequest[]
+}
+
+model BookingRequest {
+  id         String   @id @default(cuid())
+  venue      Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venueId    String
+  guestName  String
+  guestEmail String
+  eventType  String   @default("Wedding")
+  eventDate  String   @default("")
+  guests     Int      @default(0)
+  tierLabel  String   @default("Half-day · 4 hours")
+  basePrice  Int      @default(0)
+  serviceFee Int      @default(0)
+  depositDue Int      @default(0)
+  total      Int      @default(0)
+  status     String   @default("REQUESTED") // REQUESTED | CONFIRMED | DECLINED
+  createdAt  DateTime @default(now())
+}
