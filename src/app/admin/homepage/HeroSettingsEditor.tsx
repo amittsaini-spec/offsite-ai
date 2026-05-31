@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { uploadOne, BLOB_READY } from "@/app/_components/blobUpload";
 import { updateSiteSettingsAction } from "@/lib/actions";
 import type { SearchPlaceholders } from "@/lib/data";
+import CompressedVideoPicker from "./CompressedVideoPicker";
 
 type MediaType = "none" | "image" | "video" | "slideshow";
 
@@ -191,9 +192,13 @@ export default function HeroSettingsEditor({ initial }: Props) {
             </label>
           </div>
           {videoMode === "upload" ? (
-            <SingleVideoPicker
-              url={media[0] ?? ""}
-              onChange={(u) => setMedia(u ? [u] : [])}
+            <CompressedVideoPicker
+              videoUrl={media[0] ?? ""}
+              onVideoChange={(u) => setMedia(u ? [u] : [])}
+              // Compressor auto-extracts the first frame as the poster.
+              // The manual poster picker below still works as an override.
+              onPosterChange={(u) => setPoster(u)}
+              disabled={!BLOB_READY}
             />
           ) : (
             <input
@@ -306,84 +311,6 @@ function SingleImagePicker({
         <input
           type="file"
           accept="image/*"
-          disabled={busy}
-          onChange={(e) => onPick(e.target.files?.[0])}
-          style={{ display: "none" }}
-        />
-      </label>
-      {url && (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="pill no"
-          style={{ marginLeft: 10 }}
-        >
-          Clear
-        </button>
-      )}
-      {err && (
-        <div style={{ color: "var(--coral-d)", fontSize: 13, marginTop: 8 }}>
-          {err}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SingleVideoPicker({
-  url,
-  onChange,
-}: {
-  url: string;
-  onChange: (u: string) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function onPick(file: File | undefined) {
-    if (!file) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      const u = await uploadOne(file, "home/hero");
-      onChange(u);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div>
-      {url && (
-        <video
-          src={url}
-          controls
-          style={{
-            width: "100%",
-            maxWidth: 480,
-            borderRadius: 12,
-            marginBottom: 10,
-            border: "1px solid var(--line)",
-          }}
-        />
-      )}
-      <label
-        style={{
-          display: "inline-block",
-          padding: "10px 18px",
-          border: "1px dashed var(--line)",
-          borderRadius: 10,
-          cursor: busy ? "wait" : "pointer",
-          color: "var(--ink-2)",
-          fontSize: 14,
-        }}
-      >
-        {busy ? "Uploading…" : url ? "Replace video" : "+ Upload video"}
-        <input
-          type="file"
-          accept="video/*"
           disabled={busy}
           onChange={(e) => onPick(e.target.files?.[0])}
           style={{ display: "none" }}
