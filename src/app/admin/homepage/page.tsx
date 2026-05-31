@@ -68,6 +68,7 @@ export default async function Homepage({
     heroMediaType: site?.heroMediaType ?? "none",
     heroMedia: parseArray(site?.heroMedia ?? "[]"),
     heroVideoEmbed: site?.heroVideoEmbed ?? "",
+    heroPoster: site?.heroPoster ?? "",
     searchPlaceholders: parseSearchPlaceholders(site?.searchPlaceholders ?? "{}"),
   };
 

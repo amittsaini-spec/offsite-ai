@@ -133,6 +133,7 @@ export default async function Home() {
   const heroMediaType = site?.heroMediaType ?? "none";
   const heroMedia = parseArray(site?.heroMedia ?? "[]");
   const heroVideoEmbed = site?.heroVideoEmbed ?? "";
+  const heroPoster = site?.heroPoster ?? "";
   const placeholders = parseSearchPlaceholders(site?.searchPlaceholders ?? "{}");
   const valueCards =
     (site && parseValueCards(site.valueCards).length > 0
@@ -157,6 +158,7 @@ export default async function Home() {
           mediaType={heroMediaType}
           mediaUrls={heroMedia}
           videoEmbed={heroVideoEmbed}
+          posterUrl={heroPoster}
         />
         <div className="hero">
           <div className="eyebrow">

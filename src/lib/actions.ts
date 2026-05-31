@@ -445,6 +445,10 @@ export async function updateSiteSettingsAction(formData: FormData) {
 
   // Media URLs come in as a hidden JSON input the picker keeps in sync.
   const heroMedia = JSON.stringify(urlArray(formData, "heroMedia"));
+  // Poster image is only meaningful in video mode — clear otherwise so a
+  // stale URL can't surface if the agent switches modes.
+  const heroPoster =
+    heroMediaType === "video" ? str(formData, "heroPoster") : "";
 
   // Search placeholders are a 4-field object posted as discrete inputs.
   const searchPlaceholders = JSON.stringify({
@@ -463,6 +467,7 @@ export async function updateSiteSettingsAction(formData: FormData) {
       heroMediaType,
       heroMedia,
       heroVideoEmbed: str(formData, "heroVideoEmbed"),
+      heroPoster,
       searchPlaceholders,
     },
     create: {
@@ -473,6 +478,7 @@ export async function updateSiteSettingsAction(formData: FormData) {
       heroMediaType,
       heroMedia,
       heroVideoEmbed: str(formData, "heroVideoEmbed"),
+      heroPoster,
       searchPlaceholders,
     },
   });

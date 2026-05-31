@@ -24,6 +24,7 @@ model SiteSettings {
   heroMediaType      String   @default("none")   // none | image | video | slideshow
   heroMedia          String   @default("[]")     // JSON array of URLs (slideshow uses all)
   heroVideoEmbed     String   @default("")       // optional YouTube/Vimeo URL when type=video
+  heroPoster         String   @default("")       // poster image for video — also the mobile / reduced-motion fallback
   searchPlaceholders String   @default("{}")     // JSON { where, event, date, guests }
   valueCards         String   @default("[]")     // JSON [{ figure, title, desc }]
   ctaHeadline        String   @default("")

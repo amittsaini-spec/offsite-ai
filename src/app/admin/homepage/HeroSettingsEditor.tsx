@@ -15,6 +15,7 @@ type Props = {
     heroMediaType: string;
     heroMedia: string[];
     heroVideoEmbed: string;
+    heroPoster: string;
     searchPlaceholders: SearchPlaceholders;
   };
 };
@@ -31,6 +32,7 @@ export default function HeroSettingsEditor({ initial }: Props) {
   );
   const [media, setMedia] = useState<string[]>(initial.heroMedia);
   const [videoEmbed, setVideoEmbed] = useState(initial.heroVideoEmbed);
+  const [poster, setPoster] = useState(initial.heroPoster);
   const [videoMode, setVideoMode] = useState<VideoMode>(
     initial.heroVideoEmbed ? "embed" : "upload",
   );
@@ -117,6 +119,7 @@ export default function HeroSettingsEditor({ initial }: Props) {
       <input type="hidden" name="heroMediaType" value={mediaType} />
       <input type="hidden" name="heroMedia" value={mediaJson} />
       <input type="hidden" name="heroVideoEmbed" value={mediaType === "video" && videoMode === "embed" ? videoEmbed : ""} />
+      <input type="hidden" name="heroPoster" value={mediaType === "video" ? poster : ""} />
 
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginBottom: 14 }}>
         {(["none", "image", "video", "slideshow"] as const).map((opt) => (
@@ -200,6 +203,31 @@ export default function HeroSettingsEditor({ initial }: Props) {
               placeholder="https://www.youtube.com/watch?v=…"
             />
           )}
+
+          {/* Poster image: shown during buffering AND used as the static
+              background on mobile / prefers-reduced-motion. */}
+          <div style={{ marginTop: 22 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: ".06em",
+                textTransform: "uppercase",
+                color: "var(--muted)",
+                marginBottom: 8,
+              }}
+            >
+              Poster image
+            </div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 10 }}>
+              Shown before the video loads and as the still fallback on mobile
+              or when a visitor has reduced-motion enabled.
+            </div>
+            <SingleImagePicker
+              url={poster}
+              onChange={setPoster}
+            />
+          </div>
         </>
       )}
 
