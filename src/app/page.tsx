@@ -15,6 +15,7 @@ import {
 import SiteNav from "./_components/SiteNav";
 import VenueCard from "./_components/VenueCard";
 import HeroBackground from "./_components/HeroBackground";
+import HeroPills from "./_components/HeroPills";
 
 export const dynamic = "force-dynamic";
 
@@ -224,18 +225,10 @@ export default async function Home() {
             </button>
           </form>
 
-          {/* Category pills — quick filters that link straight into /venues. */}
-          <div className="hero-pills">
-            {CATEGORY_PILLS.map((p) => (
-              <Link
-                key={p.label}
-                href={p.href}
-                className={"hero-pill" + (p.primary ? " primary" : "")}
-              >
-                {p.label}
-              </Link>
-            ))}
-          </div>
+          {/* Category pills — quick filters that link straight into /venues.
+              Wrapped in a client component so clicks can inherit the current
+              market from the WHERE select above. */}
+          <HeroPills pills={CATEGORY_PILLS} />
         </div>
       </div>
 
