@@ -6,6 +6,20 @@
 // are unaffected by this flag.
 export const HIDE_VENUES_WITHOUT_PHOTOS = true;
 
+// Curated tag list surfaced in the admin link-target dropdowns (home
+// collections + sections). Free-text still works via the datalist;
+// keeping the list short keeps a single source of truth across editors.
+export const KNOWN_TAGS = [
+  "Hot Pick",
+  "Garden Venues",
+  "Beachfront",
+  "Oceanfront",
+  "Rooftop",
+  "Ballroom",
+  "Chapel",
+  "Value",
+] as const;
+
 // Curated list of hotel amenities for the multi-select on the hotel profile.
 export const AMENITIES = [
   "WiFi",

@@ -523,6 +523,128 @@ export async function saveHomeCollectionsAction(formData: FormData) {
   redirect("/admin/homepage?saved=collections");
 }
 
+// Value strip — stored as JSON on the singleton settings row, so this is
+// a column update rather than a multi-row replace.
+export async function saveValueCardsAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const raw = (formData.get("valueCards") ?? "").toString();
+  let parsed: unknown = [];
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    redirect("/admin/homepage?error=valueCards-bad-json");
+  }
+  if (!Array.isArray(parsed)) {
+    redirect("/admin/homepage?error=valueCards-not-array");
+  }
+
+  const cards = (parsed as unknown[])
+    .map((r) => {
+      const o = (r ?? {}) as Record<string, unknown>;
+      return {
+        figure: String(o.figure ?? "").trim(),
+        title: String(o.title ?? "").trim(),
+        desc: String(o.desc ?? "").trim(),
+      };
+    })
+    .filter((c) => c.figure || c.title || c.desc);
+
+  await prisma.siteSettings.upsert({
+    where: { id: "home" },
+    update: { valueCards: JSON.stringify(cards) },
+    create: { id: "home", valueCards: JSON.stringify(cards) },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/homepage");
+  redirect("/admin/homepage?saved=valueCards");
+}
+
+// Venue-feed Sections — separate model, replace-all transaction.
+export async function saveHomeSectionsAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const raw = (formData.get("sections") ?? "").toString();
+  let parsed: unknown = [];
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    redirect("/admin/homepage?error=sections-bad-json");
+  }
+  if (!Array.isArray(parsed)) {
+    redirect("/admin/homepage?error=sections-not-array");
+  }
+
+  const allowedFilters = new Set(["tag", "type", "featured"]);
+  const rows = (parsed as unknown[])
+    .map((r, i) => {
+      const o = (r ?? {}) as Record<string, unknown>;
+      const filterType = String(o.filterType ?? "tag");
+      return {
+        title: String(o.title ?? "").trim(),
+        subtitle: String(o.subtitle ?? "").trim(),
+        filterType: allowedFilters.has(filterType) ? filterType : "tag",
+        filterValue: String(o.filterValue ?? "").trim(),
+        enabled: o.enabled !== false,
+        sortOrder: i,
+      };
+    })
+    .filter((r) => r.title || r.subtitle);
+
+  await prisma.$transaction([
+    prisma.homeSection.deleteMany({}),
+    prisma.homeSection.createMany({ data: rows }),
+  ]);
+
+  revalidatePath("/");
+  revalidatePath("/admin/homepage");
+  redirect("/admin/homepage?saved=sections");
+}
+
+// CTA band — 4 plain text fields, narrow update.
+export async function updateCtaBandAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const data = {
+    ctaHeadline: str(formData, "ctaHeadline"),
+    ctaBody: str(formData, "ctaBody"),
+    ctaButtonLabel: str(formData, "ctaButtonLabel"),
+    ctaButtonLink: str(formData, "ctaButtonLink"),
+  };
+
+  await prisma.siteSettings.upsert({
+    where: { id: "home" },
+    update: data,
+    create: { id: "home", ...data },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/homepage");
+  redirect("/admin/homepage?saved=cta");
+}
+
+// Footer tagline — single text field, narrow update.
+export async function updateFooterAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const footerTagline = str(formData, "footerTagline");
+
+  await prisma.siteSettings.upsert({
+    where: { id: "home" },
+    update: { footerTagline },
+    create: { id: "home", footerTagline },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/homepage");
+  redirect("/admin/homepage?saved=footer");
+}
+
 /* ---------- bookings ---------- */
 
 export async function setBookingStatusAction(formData: FormData) {

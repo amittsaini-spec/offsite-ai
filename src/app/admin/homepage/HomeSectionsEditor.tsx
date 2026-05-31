@@ -1,35 +1,35 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { uploadOne, BLOB_READY } from "@/app/_components/blobUpload";
-import { saveHomeCollectionsAction } from "@/lib/actions";
+import { saveHomeSectionsAction } from "@/lib/actions";
 import { VENUE_TYPES, KNOWN_TAGS } from "@/lib/data";
 
-type Card = {
+type FilterType = "tag" | "type" | "featured";
+type Section = {
   id?: string;
   title: string;
   subtitle: string;
-  imageUrl: string;
-  linkType: "type" | "tag";
-  linkValue: string;
+  filterType: FilterType;
+  filterValue: string;
+  enabled: boolean;
 };
 
-const EMPTY: Card = {
+const EMPTY: Section = {
   title: "",
   subtitle: "",
-  imageUrl: "",
-  linkType: "type",
-  linkValue: "",
+  filterType: "tag",
+  filterValue: "",
+  enabled: true,
 };
 
-export default function HomeCollectionsEditor({ initial }: { initial: Card[] }) {
-  const [rows, setRows] = useState<Card[]>(
+export default function HomeSectionsEditor({ initial }: { initial: Section[] }) {
+  const [rows, setRows] = useState<Section[]>(
     initial.length > 0 ? initial : [{ ...EMPTY }],
   );
 
   const json = useMemo(() => JSON.stringify(rows), [rows]);
 
-  function update(i: number, patch: Partial<Card>) {
+  function update(i: number, patch: Partial<Section>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
   function add() {
@@ -47,17 +47,17 @@ export default function HomeCollectionsEditor({ initial }: { initial: Card[] }) 
   }
 
   return (
-    <form action={saveHomeCollectionsAction} className="formcard">
-      <input type="hidden" name="collections" value={json} />
+    <form action={saveHomeSectionsAction} className="formcard">
+      <input type="hidden" name="sections" value={json} />
 
       {rows.length === 0 && (
         <div className="empty" style={{ padding: 24, marginBottom: 14 }}>
-          No collection cards yet.
+          No sections yet.
         </div>
       )}
 
       {rows.map((row, i) => (
-        <CollectionRow
+        <SectionRow
           key={i}
           index={i}
           row={row}
@@ -72,18 +72,18 @@ export default function HomeCollectionsEditor({ initial }: { initial: Card[] }) 
 
       <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
         <button type="button" onClick={add} className="btn-ghost">
-          + Add card
+          + Add section
         </button>
         <span style={{ flex: 1 }} />
         <button type="submit" className="btn-emerald">
-          Save Shop by Moment →
+          Save sections →
         </button>
       </div>
     </form>
   );
 }
 
-function CollectionRow({
+function SectionRow({
   index,
   row,
   update,
@@ -94,30 +94,19 @@ function CollectionRow({
   isLast,
 }: {
   index: number;
-  row: Card;
-  update: (p: Partial<Card>) => void;
+  row: Section;
+  update: (p: Partial<Section>) => void;
   remove: () => void;
   up: () => void;
   down: () => void;
   isFirst: boolean;
   isLast: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function onPick(file: File | undefined) {
-    if (!file) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      const url = await uploadOne(file, "home/collections");
-      update({ imageUrl: url });
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setBusy(false);
-    }
-  }
+  // For "featured" the value field is moot — the public page just looks
+  // for the Hot Pick tag. Hide / disable the input in that case so the
+  // editor doesn't suggest typing something that won't be used.
+  const showValue = row.filterType !== "featured";
+  const options = row.filterType === "type" ? VENUE_TYPES : KNOWN_TAGS;
 
   return (
     <div
@@ -127,120 +116,91 @@ function CollectionRow({
         padding: 16,
         marginBottom: 12,
         background: "var(--sand-50)",
+        opacity: row.enabled ? 1 : 0.6,
       }}
     >
       <div style={{ display: "flex", gap: 16 }}>
-        {/* Thumbnail */}
-        <div style={{ width: 140, flexShrink: 0 }}>
-          <div
-            style={{
-              width: 140,
-              aspectRatio: "4/3",
-              borderRadius: 10,
-              border: "1px solid var(--line)",
-              background: row.imageUrl
-                ? `#000 url(${row.imageUrl}) center/cover no-repeat`
-                : "var(--sand-100)",
-              marginBottom: 8,
-            }}
-          />
-          <label
-            style={{
-              display: "inline-block",
-              padding: "6px 12px",
-              border: "1px dashed var(--line)",
-              borderRadius: 8,
-              cursor: busy ? "wait" : "pointer",
-              fontSize: 12,
-              color: "var(--ink-2)",
-              opacity: !BLOB_READY ? 0.5 : 1,
-            }}
-          >
-            {busy ? "Uploading…" : row.imageUrl ? "Replace" : "+ Image"}
-            <input
-              type="file"
-              accept="image/*"
-              disabled={busy || !BLOB_READY}
-              onChange={(e) => onPick(e.target.files?.[0])}
-              style={{ display: "none" }}
-            />
-          </label>
-          {row.imageUrl && (
-            <button
-              type="button"
-              onClick={() => update({ imageUrl: "" })}
-              className="pill no"
-              style={{ marginLeft: 6, fontSize: 11 }}
-            >
-              Clear
-            </button>
-          )}
-          {err && (
-            <div style={{ color: "var(--coral-d)", fontSize: 12, marginTop: 6 }}>
-              {err}
-            </div>
-          )}
-        </div>
-
-        {/* Fields */}
         <div style={{ flex: 1, display: "grid", gap: 10 }}>
           <div className="fgrid">
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Eyebrow (small text)</label>
+              <label>Title</label>
               <input
                 className="input"
                 value={row.title}
                 onChange={(e) => update({ title: e.target.value })}
-                placeholder="For the ceremony"
+                placeholder="Hot picks in Cancún"
               />
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Title (large text)</label>
+              <label>Subtitle</label>
               <input
                 className="input"
                 value={row.subtitle}
                 onChange={(e) => update({ subtitle: e.target.value })}
-                placeholder="Garden Ceremonies"
+                placeholder="The venues groups are reserving right now"
               />
             </div>
           </div>
 
           <div className="fgrid">
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Link kind</label>
+              <label>Filter kind</label>
               <select
                 className="input"
-                value={row.linkType}
+                value={row.filterType}
                 onChange={(e) =>
                   update({
-                    linkType: e.target.value === "tag" ? "tag" : "type",
-                    linkValue: "",
+                    filterType: e.target.value as FilterType,
+                    filterValue:
+                      e.target.value === "featured" ? "" : row.filterValue,
                   })
                 }
               >
-                <option value="type">Filter by venue type</option>
                 <option value="tag">Filter by tag</option>
+                <option value="type">Filter by venue type</option>
+                <option value="featured">Featured (Hot Pick)</option>
               </select>
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Value</label>
               <input
                 className="input"
-                value={row.linkValue}
-                onChange={(e) => update({ linkValue: e.target.value })}
-                placeholder={row.linkType === "type" ? "Garden" : "Hot Pick"}
-                list={`linkv-${index}`}
+                value={row.filterValue}
+                onChange={(e) => update({ filterValue: e.target.value })}
+                placeholder={
+                  row.filterType === "type" ? "Garden" : "Hot Pick"
+                }
+                list={`sectionv-${index}`}
+                disabled={!showValue}
+                style={{ opacity: showValue ? 1 : 0.5 }}
               />
-              <datalist id={`linkv-${index}`}>
-                {(row.linkType === "type" ? VENUE_TYPES : KNOWN_TAGS).map((v) => (
+              <datalist id={`sectionv-${index}`}>
+                {options.map((v) => (
                   <option key={v} value={v} />
                 ))}
               </datalist>
             </div>
           </div>
+
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 13.5,
+              color: "var(--ink-2)",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={row.enabled}
+              onChange={(e) => update({ enabled: e.target.checked })}
+            />
+            Show on the public home page
+          </label>
         </div>
 
-        {/* Actions column */}
         <div
           style={{
             display: "flex",
@@ -285,7 +245,6 @@ function CollectionRow({
             onClick={remove}
             className="pill no"
             style={{ fontSize: 12 }}
-            title="Remove card"
           >
             Remove
           </button>
