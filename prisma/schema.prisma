@@ -93,7 +93,9 @@ model Hotel {
   starRating   Int?
 
   createdAt    DateTime @default(now())
-  createdBy    User?    @relation(fields: [createdById], references: [id])
+  // SetNull on delete so removing a team member doesn't cascade away
+  // hotels they created — the hotel survives with an empty owner pointer.
+  createdBy    User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdById  String?
   venues       Venue[]
 }

@@ -645,6 +645,152 @@ export async function updateFooterAction(formData: FormData) {
   redirect("/admin/homepage?saved=footer");
 }
 
+/* ---------- payouts (concierge-first; Stripe seam noted inline) ---------- */
+
+// Flips a booking's payoutStatus between PENDING and PAID, with the
+// matching payoutPaidAt timestamp set or cleared. Only COMPLETED bookings
+// are payout-eligible — the action refuses otherwise so we can't pay out
+// before the event happened.
+export async function togglePayoutAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin/revenue");
+
+  const booking = await prisma.bookingRequest.findUnique({
+    where: { id },
+    select: {
+      status: true,
+      payoutStatus: true,
+      venue: { select: { hotelId: true } },
+    },
+  });
+  if (!booking) redirect("/admin/revenue");
+  if (booking!.status !== "COMPLETED") {
+    redirect(`/admin/revenue/${booking!.venue.hotelId}?error=not-completed`);
+  }
+
+  const nextStatus = booking!.payoutStatus === "PAID" ? "PENDING" : "PAID";
+  const nextPaidAt = nextStatus === "PAID" ? new Date() : null;
+
+  // STRIPE SEAM: with Stripe Connect this is where we'd issue
+  //   stripe.transfers.create({ amount: net, currency: 'usd',
+  //     destination: hotel.stripeAccountId, transfer_group: booking.id })
+  // and only flip payoutStatus on the resulting transfer.id. For the
+  // concierge launch we record the manual ACH / wire here and trust the
+  // operator.
+  await prisma.bookingRequest.update({
+    where: { id },
+    data: { payoutStatus: nextStatus, payoutPaidAt: nextPaidAt },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/revenue");
+  revalidatePath(`/admin/revenue/${booking!.venue.hotelId}`);
+  redirect(`/admin/revenue/${booking!.venue.hotelId}?saved=1`);
+}
+
+/* ---------- team management ---------- */
+
+const STRONG_PASSWORD_MIN = 8;
+
+export async function createTeamMemberAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const name = str(formData, "name");
+  const email = str(formData, "email").toLowerCase();
+  const password = str(formData, "password");
+  const roleRaw = str(formData, "role");
+  const role = roleRaw === "ADMIN" ? "ADMIN" : "AGENT";
+
+  if (!name || !email || !password) {
+    redirect("/admin/users?error=missing-fields");
+  }
+  if (password.length < STRONG_PASSWORD_MIN) {
+    redirect("/admin/users?error=weak-password");
+  }
+
+  // Email uniqueness is enforced by the schema, but checking explicitly
+  // lets us redirect with a friendly message instead of a 500.
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    redirect("/admin/users?error=email-exists");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.create({
+    data: { name, email, passwordHash, role },
+  });
+
+  revalidatePath("/admin/users");
+  redirect("/admin/users?saved=created");
+}
+
+export async function setUserRoleAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  const role = str(formData, "role");
+  if (id === user!.id) {
+    redirect("/admin/users?error=self-demote");
+  }
+
+  const next = role === "ADMIN" ? "ADMIN" : "AGENT";
+
+  // If demoting an ADMIN, ensure we're not removing the last one.
+  if (next === "AGENT") {
+    const currentAdmins = await prisma.user.count({ where: { role: "ADMIN" } });
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { role: true },
+    });
+    if (target?.role === "ADMIN" && currentAdmins <= 1) {
+      redirect("/admin/users?error=last-admin");
+    }
+  }
+
+  await prisma.user.update({ where: { id }, data: { role: next } });
+  revalidatePath("/admin/users");
+  redirect("/admin/users?saved=role");
+}
+
+export async function deleteUserAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  if (!id) redirect("/admin/users");
+  if (id === user!.id) {
+    redirect("/admin/users?error=self-delete");
+  }
+
+  // Refuse to delete the last admin so an ops mistake can't lock everyone out.
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true },
+  });
+  if (!target) redirect("/admin/users");
+  if (target!.role === "ADMIN") {
+    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (adminCount <= 1) redirect("/admin/users?error=last-admin");
+  }
+
+  // Belt-and-suspenders: null the FK on any hotels they created before
+  // deleting the user, in case the schema's onDelete: SetNull hasn't been
+  // applied yet in this database.
+  await prisma.hotel.updateMany({
+    where: { createdById: id },
+    data: { createdById: null },
+  });
+  await prisma.user.delete({ where: { id } });
+
+  revalidatePath("/admin/users");
+  redirect("/admin/users?saved=deleted");
+}
+
 /* ---------- bookings ---------- */
 
 export async function setBookingStatusAction(formData: FormData) {
