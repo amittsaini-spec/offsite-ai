@@ -15,6 +15,21 @@ import HeroBackground from "./_components/HeroBackground";
 
 export const dynamic = "force-dynamic";
 
+// Category pills sit directly under the search bar in the hero. Today
+// they're a hardcoded default set — easy to lift into the homepage admin
+// later as another JSON-on-SiteSettings column. Each pill is just a
+// labelled link to /venues with the right filter applied.
+type CategoryPill = { label: string; href: string; primary?: boolean };
+const CATEGORY_PILLS: CategoryPill[] = [
+  { label: "All venues", href: "/venues", primary: true },
+  { label: "Weddings", href: "/venues?event=Weddings" },
+  { label: "Corporate", href: "/venues?event=Corporate" },
+  { label: "Birthdays", href: "/venues?event=Birthdays" },
+  { label: "Gardens", href: "/venues?type=Garden" },
+  { label: "Beachfront", href: "/venues?type=Beachfront" },
+  { label: "Rooftops", href: "/venues?type=Rooftop" },
+];
+
 // Original copy + structure used both when a row is missing and to seed
 // fresh installs. Keeps the page identical to the pre-CMS version when
 // the SiteSettings row hasn't been customized yet.
@@ -132,7 +147,7 @@ export default async function Home() {
     <>
       <SiteNav />
 
-      {/* Hero — wrapper hosts the optional background; .hero is the offset content. */}
+      {/* ─── HERO (statement + search + category pills) ─────────────── */}
       <div className="hero-wrap">
         <HeroBackground
           mediaType={heroMediaType}
@@ -167,21 +182,47 @@ export default async function Home() {
               ⚲ Search
             </Link>
           </div>
+
+          {/* Category pills — quick filters that link straight into /venues. */}
+          <div className="hero-pills">
+            {CATEGORY_PILLS.map((p) => (
+              <Link
+                key={p.label}
+                href={p.href}
+                className={"hero-pill" + (p.primary ? " primary" : "")}
+              >
+                {p.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Value strip */}
-      <div className="model">
-        {valueCards.map((c, i) => (
-          <div className="mcard" key={`${c.title}-${i}`}>
-            <div className="n">{c.figure}</div>
-            <div className="t">{c.title}</div>
-            <div className="d">{c.desc}</div>
+      {/* ─── VENUE FEEDS (HomeSection rows) ─────────────────────────── */}
+      {visibleSections.map((s) => {
+        const matches = filterVenues(venues, s.filterType, s.filterValue).slice(0, 3);
+        if (matches.length === 0) return null;
+        return (
+          <div className="section" key={s.id}>
+            <div className="shead">
+              <div>
+                <h2>{s.title}</h2>
+                <p>{s.subtitle}</p>
+              </div>
+              <Link href={sectionHref(s.filterType, s.filterValue)} className="see">
+                See all →
+              </Link>
+            </div>
+            <div className="grid">
+              {matches.map((v) => (
+                <VenueCard key={v.id} v={v} />
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
 
-      {/* Shop by moment */}
+      {/* ─── SHOP BY MOMENT (HomeCollection cards) ──────────────────── */}
       <div className="section">
         <div className="shead">
           <div>
@@ -243,30 +284,18 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Venue feed sections — each pulls a slice of the venue list by its filter */}
-      {visibleSections.map((s) => {
-        const matches = filterVenues(venues, s.filterType, s.filterValue).slice(0, 3);
-        if (matches.length === 0) return null;
-        return (
-          <div className="section" key={s.id}>
-            <div className="shead">
-              <div>
-                <h2>{s.title}</h2>
-                <p>{s.subtitle}</p>
-              </div>
-              <Link href={sectionHref(s.filterType, s.filterValue)} className="see">
-                See all →
-              </Link>
-            </div>
-            <div className="grid">
-              {matches.map((v) => (
-                <VenueCard key={v.id} v={v} />
-              ))}
-            </div>
+      {/* ─── VALUE STRIP (moved below the supporting sections) ──────── */}
+      <div className="model">
+        {valueCards.map((c, i) => (
+          <div className="mcard" key={`${c.title}-${i}`}>
+            <div className="n">{c.figure}</div>
+            <div className="t">{c.title}</div>
+            <div className="d">{c.desc}</div>
           </div>
-        );
-      })}
+        ))}
+      </div>
 
+      {/* ─── CTA BAND ───────────────────────────────────────────────── */}
       <div className="band">
         <div className="band-in">
           <h2>{ctaHeadline}</h2>
@@ -277,6 +306,7 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* ─── FOOTER ─────────────────────────────────────────────────── */}
       <div className="foot">
         <div className="logo">
           offsite<b>.ai</b>
