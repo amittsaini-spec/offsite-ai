@@ -7,6 +7,7 @@ import {
   parsePricingOptions,
   canTransition,
   parseNotes,
+  normalizeMarket,
   BLOCKING_STATUSES,
 } from "./data";
 import bcrypt from "bcryptjs";
@@ -116,6 +117,7 @@ export async function createHotelAction(formData: FormData) {
       name: str(formData, "name"),
       brand: str(formData, "brand"),
       description: str(formData, "description"),
+      market: normalizeMarket(str(formData, "market")),
       address: str(formData, "address"),
       city: str(formData, "city"),
       region: str(formData, "region"),
@@ -149,6 +151,7 @@ export async function updateHotelAction(formData: FormData) {
       name: str(formData, "name"),
       brand: str(formData, "brand"),
       description: str(formData, "description"),
+      market: normalizeMarket(str(formData, "market")),
       address: str(formData, "address"),
       city: str(formData, "city"),
       region: str(formData, "region"),

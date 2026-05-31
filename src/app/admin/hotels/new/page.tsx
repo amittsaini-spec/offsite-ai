@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createHotelAction } from "@/lib/actions";
-import { AMENITIES } from "@/lib/data";
+import { AMENITIES, MARKETS, DEFAULT_MARKET } from "@/lib/data";
 import HotelAddressFields from "@/app/admin/_components/HotelAddressFields";
 
 export default function NewHotel() {
@@ -65,6 +65,21 @@ export default function NewHotel() {
 
         {/* ── Location ────────────────────────────────────────────── */}
         <div className="fsec">Location</div>
+        <div className="field">
+          <label>Market</label>
+          <select
+            className="input"
+            name="market"
+            defaultValue={DEFAULT_MARKET}
+            required
+          >
+            {MARKETS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
         <HotelAddressFields initial={{}} />
         <div className="field" style={{ marginTop: 14 }}>
           <label>Zone / sub-area (optional)</label>

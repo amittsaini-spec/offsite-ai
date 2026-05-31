@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { updateHotelAction, deleteHotelAction } from "@/lib/actions";
-import { AMENITIES, parseArray } from "@/lib/data";
+import { AMENITIES, MARKETS, parseArray, normalizeMarket } from "@/lib/data";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
 import HotelAddressFields from "@/app/admin/_components/HotelAddressFields";
 
@@ -94,6 +94,21 @@ export default async function EditHotel({
 
         {/* ── Location ────────────────────────────────────────────── */}
         <div className="fsec">Location</div>
+        <div className="field">
+          <label>Market</label>
+          <select
+            className="input"
+            name="market"
+            defaultValue={normalizeMarket(hotel!.market)}
+            required
+          >
+            {MARKETS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
         <HotelAddressFields
           initial={{
             address: hotel!.address,

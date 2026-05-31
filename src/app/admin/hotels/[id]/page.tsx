@@ -117,6 +117,7 @@ export default async function HotelDetail({
           {hotel!.starRating && (
             <ProfileField label="Rating" value={`${hotel!.starRating} stars`} />
           )}
+          <ProfileField label="Market" value={hotel!.market} />
           {hotel!.address && <ProfileField label="Address" value={hotel!.address} />}
           {(hotel!.region || hotel!.country) && (
             <ProfileField

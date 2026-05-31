@@ -6,6 +6,26 @@
 // are unaffected by this flag.
 export const HIDE_VENUES_WITHOUT_PHOTOS = true;
 
+// ─── Markets (launch destinations) ───
+// Curated list of cities the marketplace operates in. Hotel rows carry a
+// `market` String column; the server actions validate against this list
+// via normalizeMarket() so an unknown value can never land in the DB.
+export const MARKETS = [
+  "Cancún",
+  "Cabo San Lucas",
+  "San Miguel de Allende",
+  "Puerto Vallarta",
+] as const;
+export type Market = (typeof MARKETS)[number];
+export const DEFAULT_MARKET: Market = "Cancún";
+
+export function normalizeMarket(input: string | undefined | null): Market {
+  if (!input) return DEFAULT_MARKET;
+  return (MARKETS as readonly string[]).includes(input)
+    ? (input as Market)
+    : DEFAULT_MARKET;
+}
+
 // Curated tag list surfaced in the admin link-target dropdowns (home
 // collections + sections). Free-text still works via the datalist;
 // keeping the list short keeps a single source of truth across editors.

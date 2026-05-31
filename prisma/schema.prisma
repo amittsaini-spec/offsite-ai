@@ -74,6 +74,11 @@ model Hotel {
   description  String   @default("")
 
   // Location
+  // Market is the launch destination — one of: Cancún, Cabo San Lucas,
+  // San Miguel de Allende, Puerto Vallarta. Constraint enforced in the
+  // server actions (normalizeMarket) since SQLite/Postgres parity rules
+  // out a Prisma enum here.
+  market       String   @default("Cancún")
   address      String   @default("")  // full street address
   city         String
   region       String   @default("")  // state / province

@@ -75,11 +75,39 @@ input,select,textarea{ font-family:inherit; }
 /* search */
 .search{ display:flex; align-items:stretch; background:var(--white); border:1px solid var(--line);
   border-radius:18px; box-shadow:var(--shadow); margin-top:34px; max-width:900px; overflow:hidden; flex-wrap:wrap; }
-.sfield{ flex:1; min-width:150px; padding:15px 22px; border-right:1px solid var(--line); text-align:left; }
+.sfield{ flex:1; min-width:150px; padding:15px 22px; border-right:1px solid var(--line); text-align:left;
+  display:flex; flex-direction:column; gap:3px; }
 .sfield .lab{ font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
 .sfield .val{ font-size:15px; font-weight:500; margin-top:3px; }
+/* Form inputs styled to look like the original .val text so the
+   transition from display divs to a real form is visually seamless. */
+.sfield .val-input{ font-size:15px; font-weight:500; color:var(--ink); font-family:inherit;
+  border:none; background:transparent; padding:0; width:100%; }
+.sfield .val-input:focus{ outline:none; }
+.sfield .val-input::placeholder{ color:var(--muted); }
+.sfield select.val-input{ -webkit-appearance:none; -moz-appearance:none; appearance:none; cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),
+                   linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);
+  background-position:right 0 top 8px, right 4px top 8px;
+  background-size:4px 4px, 4px 4px; background-repeat:no-repeat; padding-right:14px; }
+.sfield input[type="number"].val-input::-webkit-outer-spin-button,
+.sfield input[type="number"].val-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
 .sgo{ margin:9px; padding:0 26px; background:var(--emerald); color:#fff; border-radius:13px; font-weight:600;
-  font-size:15px; display:flex; align-items:center; gap:9px; }
+  font-size:15px; display:flex; align-items:center; gap:9px; border:none; cursor:pointer; }
+.sgo:hover{ background:var(--emerald-2); }
+
+/* Refine bar on /venues — compact filter form for date + guests. */
+.refine-bar{ display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap;
+  background:var(--white); border:1px solid var(--line); border-radius:14px; padding:14px 18px; }
+.refine-bar .ff{ display:flex; flex-direction:column; gap:4px; min-width:160px; }
+.refine-bar .ff label{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.refine-bar .ff input{ padding:9px 12px; border:1px solid var(--line); border-radius:9px;
+  background:var(--sand-50); font-size:14px; color:var(--ink); font-family:inherit; }
+.refine-bar .fapply{ padding:10px 18px; background:var(--emerald); color:#fff; border-radius:10px;
+  font-weight:600; font-size:13.5px; border:none; cursor:pointer; }
+.refine-bar .fapply:hover{ background:var(--emerald-2); }
+.refine-bar .fclear{ font-size:13px; color:var(--ink-2); padding:10px 6px; }
+.refine-bar .fclear:hover{ color:var(--coral-d); }
 
 /* model strip */
 .model{ max-width:1200px; margin:42px auto 0; padding:0 28px; display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }

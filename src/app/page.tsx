@@ -8,6 +8,9 @@ import {
   parseSearchPlaceholders,
   splitItalics,
   HIDE_VENUES_WITHOUT_PHOTOS,
+  EVENT_TYPES,
+  MARKETS,
+  DEFAULT_MARKET,
 } from "@/lib/data";
 import SiteNav from "./_components/SiteNav";
 import VenueCard from "./_components/VenueCard";
@@ -161,27 +164,65 @@ export default async function Home() {
           <h1 className="h1">{renderHeadline(heroHeadline)}</h1>
           <p className="sub">{heroSubhead}</p>
 
-          <div className="search">
+          {/* Functional search — GETs to /venues with the chosen filters as
+              query params. Empty fields stay empty in the URL; the browse
+              page treats empty / "All" as "no filter" on that axis. */}
+          <form className="search" action="/venues" method="get">
             <div className="sfield">
-              <div className="lab">Where</div>
-              <div className="val">{placeholders.where}</div>
+              <label className="lab" htmlFor="hero-where">Where</label>
+              <select
+                id="hero-where"
+                name="market"
+                className="val-input"
+                defaultValue={DEFAULT_MARKET}
+              >
+                {MARKETS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="sfield">
-              <div className="lab">Event</div>
-              <div className="val">{placeholders.event}</div>
+              <label className="lab" htmlFor="hero-event">Event</label>
+              <select
+                id="hero-event"
+                name="event"
+                className="val-input"
+                defaultValue="All"
+              >
+                <option value="All">All</option>
+                {EVENT_TYPES.map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="sfield">
-              <div className="lab">Date</div>
-              <div className="val">{placeholders.date}</div>
+              <label className="lab" htmlFor="hero-date">Date</label>
+              <input
+                id="hero-date"
+                name="date"
+                type="date"
+                className="val-input"
+              />
             </div>
             <div className="sfield">
-              <div className="lab">Guests</div>
-              <div className="val">{placeholders.guests}</div>
+              <label className="lab" htmlFor="hero-guests">Guests</label>
+              <input
+                id="hero-guests"
+                name="guests"
+                type="number"
+                min={1}
+                className="val-input"
+                placeholder={placeholders.guests.replace(/[^0-9]/g, "") || "120"}
+              />
             </div>
-            <Link href="/venues" className="sgo">
+            <button type="submit" className="sgo">
               ⚲ Search
-            </Link>
-          </div>
+            </button>
+          </form>
 
           {/* Category pills — quick filters that link straight into /venues. */}
           <div className="hero-pills">
