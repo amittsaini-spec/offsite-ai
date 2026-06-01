@@ -300,88 +300,130 @@ export default function CompressedVideoPicker({
       )}
 
       {!busy && (
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          {/* Main path — compress + auto-poster */}
-          <label
+        <div>
+          {/* ── Reliable path — Skip compression / upload directly ──
+              Promoted to the primary visual action because in-browser
+              compression is the placeholder pipeline and is unreliable
+              across machines / videos. The compress path stays available
+              below but reads as the secondary "try harder" option. */}
+          <div
             style={{
-              display: "inline-block",
-              padding: "10px 18px",
-              border: "1px dashed var(--line)",
-              borderRadius: 10,
-              cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.5 : 1,
-              color: "var(--ink-2)",
-              fontSize: 14,
+              padding: "14px 16px",
+              border: "1px solid var(--emerald)",
+              borderRadius: 12,
+              background: "rgba(15,61,48,.04)",
+              marginBottom: 12,
             }}
           >
-            {videoUrl ? "Replace video (compress)" : "+ Upload video (compress)"}
-            <input
-              ref={inputRef}
-              type="file"
-              accept="video/*"
-              disabled={disabled}
-              onChange={(e) => onPick(e.target.files?.[0])}
-              style={{ display: "none" }}
-            />
-          </label>
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                letterSpacing: ".06em",
+                textTransform: "uppercase",
+                color: "var(--emerald)",
+                marginBottom: 6,
+              }}
+            >
+              Recommended
+            </div>
+            <div
+              style={{
+                fontFamily: "'Fraunces',serif",
+                fontWeight: 500,
+                fontSize: 17,
+                marginBottom: 6,
+              }}
+            >
+              Skip compression / upload directly
+            </div>
+            <div style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 12 }}>
+              Uploads your video file to Blob as-is. Best when you already have a
+              compressed file (≈2–4 MB MP4). Remember to upload a poster image
+              manually below.
+            </div>
+            <label
+              className="btn-emerald"
+              style={{
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.5 : 1,
+              }}
+            >
+              {videoUrl ? "Replace video (no compression)" : "+ Upload video (no compression)"}
+              <input
+                ref={directInputRef}
+                type="file"
+                accept="video/*"
+                disabled={disabled}
+                onChange={(e) => onPickDirect(e.target.files?.[0])}
+                style={{ display: "none" }}
+              />
+            </label>
+            {videoUrl && (
+              <button
+                type="button"
+                onClick={() => {
+                  onVideoChange("");
+                  onPosterChange("");
+                }}
+                className="pill no"
+                style={{ fontSize: 13, marginLeft: 10 }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
 
-          {/* Always-available fallback — direct upload, no ffmpeg.
-              Visually secondary so the compress path stays the default. */}
-          <label
+          {/* ── Experimental path — in-browser ffmpeg.wasm compression.
+              Demoted to "try if you want auto-compression" since reliability
+              varies. Same UI lives here but visually secondary. */}
+          <details
             style={{
-              display: "inline-block",
-              padding: "10px 16px",
               border: "1px solid var(--line)",
-              borderRadius: 10,
-              cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.5 : 1,
-              color: "var(--muted)",
-              fontSize: 13,
+              borderRadius: 12,
+              padding: "0 16px",
               background: "var(--white)",
             }}
-            title="Skip in-browser compression. Use when compression fails or you already have a small file."
           >
-            Upload as-is (no compression)
-            <input
-              ref={directInputRef}
-              type="file"
-              accept="video/*"
-              disabled={disabled}
-              onChange={(e) => onPickDirect(e.target.files?.[0])}
-              style={{ display: "none" }}
-            />
-          </label>
-
-          {videoUrl && (
-            <button
-              type="button"
-              onClick={() => {
-                onVideoChange("");
-                onPosterChange("");
+            <summary
+              style={{
+                padding: "12px 0",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "var(--ink-2)",
+                listStyle: "none",
               }}
-              className="pill no"
-              style={{ fontSize: 13 }}
             >
-              Remove
-            </button>
-          )}
+              Or try in-browser compression (experimental) ▾
+            </summary>
+            <div style={{ paddingBottom: 14 }}>
+              <div style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 10 }}>
+                Compresses to 1280px wide · H.264 · no audio (~2–4 MB) and
+                auto-generates a poster from the first frame. Takes 10–60s
+                depending on input length and machine; can fail on some videos.
+              </div>
+              <label
+                className="btn-ghost"
+                style={{
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  opacity: disabled ? 0.5 : 1,
+                }}
+              >
+                {videoUrl ? "Replace video (compress)" : "+ Upload video (compress)"}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="video/*"
+                  disabled={disabled}
+                  onChange={(e) => onPick(e.target.files?.[0])}
+                  style={{ display: "none" }}
+                />
+              </label>
+            </div>
+          </details>
         </div>
       )}
-
-      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 10 }}>
-        <strong>Compress</strong> resizes to 1280px wide / H.264 / no audio in
-        your browser (~2–4 MB for a short loop) and auto-generates a poster from
-        the first frame. <strong>Upload as-is</strong> skips compression — use it
-        when compression fails or you already have a small file; set the poster
-        manually below in that case.
-      </div>
 
       {error && (
         <div
