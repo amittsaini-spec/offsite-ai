@@ -24,6 +24,10 @@ type Phase =
   | "extracting"
   | "uploading-video"
   | "uploading-poster"
+  // Fallback path: skip ffmpeg, upload the file directly via client-direct
+  // Blob upload. Use this when compression fails or when the agent has a
+  // pre-compressed file in hand.
+  | "uploading-direct"
   | "error";
 
 type Props = {
@@ -46,8 +50,33 @@ export default function CompressedVideoPicker({
   const [statusMsg, setStatusMsg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Separate hidden input for the no-compression fallback so we can
+  // re-trigger it from the error banner without clobbering the compress
+  // input's onChange handler.
+  const directInputRef = useRef<HTMLInputElement | null>(null);
 
   const busy = phase !== "idle" && phase !== "error";
+
+  // Fallback path — upload exactly what the agent selected, no ffmpeg.
+  // The poster has to be set manually via the picker below in this case
+  // because we never get the frame data into memory.
+  async function onPickDirect(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setPhase("uploading-direct");
+    setStatusMsg("Uploading video as-is (no compression)…");
+    setProgress(0);
+    try {
+      const url = await uploadOne(file, "home/hero");
+      onVideoChange(url);
+      setPhase("idle");
+      setStatusMsg("");
+    } catch (e) {
+      console.error("Direct video upload failed", e);
+      setPhase("error");
+      setError(e instanceof Error ? e.message : "Upload failed");
+    }
+  }
 
   async function onPick(file: File | undefined) {
     if (!file) return;
@@ -213,7 +242,9 @@ export default function CompressedVideoPicker({
           {phase === "compressing" && (
             <ProgressBar pct={progress} label={`${progress}%`} />
           )}
-          {phase === "uploading-video" || phase === "uploading-poster" ? (
+          {phase === "uploading-video" ||
+          phase === "uploading-poster" ||
+          phase === "uploading-direct" ? (
             <Indeterminate />
           ) : null}
           {phase === "loading" && (
@@ -231,7 +262,15 @@ export default function CompressedVideoPicker({
       )}
 
       {!busy && (
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {/* Main path — compress + auto-poster */}
           <label
             style={{
               display: "inline-block",
@@ -244,7 +283,7 @@ export default function CompressedVideoPicker({
               fontSize: 14,
             }}
           >
-            {videoUrl ? "Replace video" : "+ Upload video"}
+            {videoUrl ? "Replace video (compress)" : "+ Upload video (compress)"}
             <input
               ref={inputRef}
               type="file"
@@ -254,6 +293,34 @@ export default function CompressedVideoPicker({
               style={{ display: "none" }}
             />
           </label>
+
+          {/* Always-available fallback — direct upload, no ffmpeg.
+              Visually secondary so the compress path stays the default. */}
+          <label
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.5 : 1,
+              color: "var(--muted)",
+              fontSize: 13,
+              background: "var(--white)",
+            }}
+            title="Skip in-browser compression. Use when compression fails or you already have a small file."
+          >
+            Upload as-is (no compression)
+            <input
+              ref={directInputRef}
+              type="file"
+              accept="video/*"
+              disabled={disabled}
+              onChange={(e) => onPickDirect(e.target.files?.[0])}
+              style={{ display: "none" }}
+            />
+          </label>
+
           {videoUrl && (
             <button
               type="button"
@@ -271,9 +338,11 @@ export default function CompressedVideoPicker({
       )}
 
       <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 10 }}>
-        Videos are compressed in your browser (max 1280px wide, H.264, no audio)
-        before uploading — typically 2–4 MB for a short loop. A poster image is
-        auto-generated from the first frame; you can override it below.
+        <strong>Compress</strong> resizes to 1280px wide / H.264 / no audio in
+        your browser (~2–4 MB for a short loop) and auto-generates a poster from
+        the first frame. <strong>Upload as-is</strong> skips compression — use it
+        when compression fails or you already have a small file; set the poster
+        manually below in that case.
       </div>
 
       {error && (
@@ -285,9 +354,13 @@ export default function CompressedVideoPicker({
             color: "var(--coral-d)",
             borderRadius: 10,
             fontSize: 13,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 10,
           }}
         >
-          {error}
+          <span style={{ flex: 1 }}>{error}</span>
           <button
             type="button"
             onClick={() => {
@@ -296,9 +369,21 @@ export default function CompressedVideoPicker({
               inputRef.current?.click();
             }}
             className="btn-ghost"
-            style={{ marginLeft: 10, fontSize: 12, padding: "4px 12px" }}
+            style={{ fontSize: 12, padding: "4px 12px" }}
           >
-            Try again
+            Try compression again
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPhase("idle");
+              setError(null);
+              directInputRef.current?.click();
+            }}
+            className="btn-ghost"
+            style={{ fontSize: 12, padding: "4px 12px" }}
+          >
+            Upload as-is instead
           </button>
         </div>
       )}
