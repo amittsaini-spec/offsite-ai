@@ -1,10 +1,11 @@
 // Shared constants + pure helpers used across server and client components.
 
-// DEMO: hide venues with no uploaded photos from the public marketplace
-// (home + /venues browse). Set to false to show every PUBLISHED venue
-// again, regardless of whether photos have been uploaded yet. Admin views
-// are unaffected by this flag.
-export const HIDE_VENUES_WITHOUT_PHOTOS = true;
+// Public marketplace shows every PUBLISHED venue regardless of photo
+// state. When no cover photo is uploaded, VenueCard renders the existing
+// type-keyed gradient as a fallback so the page never looks broken.
+// Set to true to hide photoless venues again (useful for demo polish).
+// Admin views are unaffected by this flag.
+export const HIDE_VENUES_WITHOUT_PHOTOS = false;
 
 // ─── Listing health (completeness score) ──────────────────────
 // Single source of truth used by the row badges and the dashboard
