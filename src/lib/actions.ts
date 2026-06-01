@@ -835,6 +835,56 @@ export async function setBookingStatusAction(formData: FormData) {
   redirect(`/admin/bookings/${id}`);
 }
 
+// Outward conversation post. Always recorded as sender="agent" — guest
+// and hotel messages arrive via future inbound channels (email reply
+// webhook etc.) but for now agents transcribe them by hand on the
+// detail page using sender override (planned).
+export async function postBookingMessageAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = str(formData, "id");
+  const body = str(formData, "body");
+  if (!id || !body) redirect(`/admin/bookings/${id}`);
+
+  const booking = await prisma.bookingRequest.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      guestEmail: true,
+      guestName: true,
+      venue: {
+        select: {
+          name: true,
+          hotel: { select: { name: true, contactEmail: true } },
+        },
+      },
+    },
+  });
+  if (!booking) redirect("/admin/bookings");
+
+  await prisma.message.create({
+    data: { bookingId: id, sender: "agent", body },
+  });
+
+  // RESEND SEAM ─────────────────────────────────────────────
+  // Wire up Resend (or any transactional email provider) here to notify
+  // the guest and the hotel when an agent posts a message. Everything the
+  // template needs is in scope:
+  //   guestEmail : booking.guestEmail
+  //   guestName  : booking.guestName
+  //   hotelEmail : booking.venue.hotel.contactEmail
+  //   hotelName  : booking.venue.hotel.name
+  //   venueName  : booking.venue.name
+  //   body, link : `${BASE_URL}/admin/bookings/${id}`
+  // Until then, posting is a record-only operation — agents follow up
+  // via the existing email/phone channels manually.
+  // ─────────────────────────────────────────────────────────
+
+  revalidatePath(`/admin/bookings/${id}`);
+  redirect(`/admin/bookings/${id}#thread`);
+}
+
 export async function addBookingNoteAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

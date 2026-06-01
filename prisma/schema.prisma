@@ -138,9 +138,10 @@ model Venue {
 }
 
 model BookingRequest {
-  id         String   @id @default(cuid())
-  venue      Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  venue      Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
   venueId    String
+  messages   Message[]
   guestName  String
   guestEmail String
   eventType  String   @default("Wedding")
@@ -160,4 +161,17 @@ model BookingRequest {
   payoutPaidAt  DateTime?
   payoutNote    String    @default("")
   createdAt  DateTime @default(now())
+}
+
+// Outward-facing conversation thread per booking. Agents post messages
+// here; we record received messages from the guest or hotel under the
+// same model so the timeline reads as a single chronological feed.
+// Internal-only notes live on BookingRequest.notes (Phase 5.2).
+model Message {
+  id        String   @id @default(cuid())
+  booking   BookingRequest @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+  sender    String   // "agent" | "guest" | "hotel"
+  body      String
+  createdAt DateTime @default(now())
 }

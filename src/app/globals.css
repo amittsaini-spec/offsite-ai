@@ -370,6 +370,20 @@ input,select,textarea{ font-family:inherit; }
 .kvtbl td:last-child{ color:var(--ink); font-weight:500; text-align:right; }
 .kvtbl tr.tot td{ font-weight:700; background:var(--sand-50); }
 
+/* booking messages thread — outward-facing conversation */
+.thread{ display:flex; flex-direction:column; gap:14px; }
+.msg{ border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:var(--white); }
+.msg-meta{ display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+.msg-who{ font-size:13px; font-weight:600; color:var(--ink-2); }
+.msg-time{ font-size:12px; color:var(--muted); margin-left:auto; }
+.msg-body{ font-size:14.5px; color:var(--ink); line-height:1.55; white-space:pre-wrap; }
+.msg-agent{ background:rgba(15,61,48,.04); border-color:rgba(15,61,48,.18); }
+.msg-guest{ background:var(--sand-50); }
+.msg-hotel{ background:#fff8ed; border-color:#f0dfb6; }
+.msg-pill-agent{ background:var(--emerald); color:#fff; }
+.msg-pill-guest{ background:var(--sand-200); color:var(--ink); }
+.msg-pill-hotel{ background:var(--gold); color:#fff; }
+
 /* internal notes timeline */
 .note{ border-left:2px solid var(--emerald); padding:2px 0 14px 14px; margin-bottom:14px; }
 .note:last-of-type{ margin-bottom:18px; }

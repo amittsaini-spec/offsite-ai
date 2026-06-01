@@ -11,7 +11,11 @@ import {
   STATUS_ACTION,
   type BookingStatus,
 } from "@/lib/data";
-import { setBookingStatusAction, addBookingNoteAction } from "@/lib/actions";
+import {
+  setBookingStatusAction,
+  addBookingNoteAction,
+  postBookingMessageAction,
+} from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +36,10 @@ export default async function BookingDetail({
 
   const b = await prisma.bookingRequest.findUnique({
     where: { id },
-    include: { venue: { include: { hotel: true } } },
+    include: {
+      venue: { include: { hotel: true } },
+      messages: { orderBy: { createdAt: "asc" } },
+    },
   });
   if (!b) notFound();
 
@@ -286,6 +293,83 @@ export default async function BookingDetail({
               </form>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Outward-facing message thread (full width) ─────────────── */}
+      <div id="thread" className="panel" style={{ marginTop: 22, scrollMarginTop: 80 }}>
+        <h3>
+          Messages
+          {b!.messages.length > 0 && (
+            <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+              {" "}
+              ({b!.messages.length})
+            </span>
+          )}
+        </h3>
+        <div style={{ padding: 22 }}>
+          {b!.messages.length === 0 ? (
+            <div
+              style={{ color: "var(--muted)", fontSize: 13.5, marginBottom: 14 }}
+            >
+              No messages yet. Post one to start the conversation with{" "}
+              {b!.guestName} (or to record what {b!.venue.hotel.name} said over
+              the phone).
+            </div>
+          ) : (
+            <div className="thread">
+              {b!.messages.map((m) => {
+                const sender = m.sender as "agent" | "guest" | "hotel";
+                const label =
+                  sender === "agent"
+                    ? "You · Offsite"
+                    : sender === "guest"
+                      ? `${b!.guestName} · guest`
+                      : `${b!.venue.hotel.name} · hotel`;
+                return (
+                  <div key={m.id} className={`msg msg-${sender}`}>
+                    <div className="msg-meta">
+                      <span className={`pill msg-pill-${sender}`}>
+                        {sender.toUpperCase()}
+                      </span>
+                      <span className="msg-who">{label}</span>
+                      <span className="msg-time">
+                        {relativeTime(m.createdAt)}
+                      </span>
+                    </div>
+                    <div className="msg-body">{m.body}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <form action={postBookingMessageAction} style={{ marginTop: 18 }}>
+            <input type="hidden" name="id" value={b!.id} />
+            <textarea
+              name="body"
+              className="textarea"
+              required
+              placeholder={`Reply to ${b!.guestName}…`}
+              style={{ minHeight: 80 }}
+            />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 10,
+              }}
+            >
+              <button type="submit" className="btn-emerald">
+                Post message →
+              </button>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                Recorded as you (Offsite agent). Email notification to guest +
+                hotel wires in here once the Resend integration is enabled.
+              </span>
+            </div>
+          </form>
         </div>
       </div>
     </>
