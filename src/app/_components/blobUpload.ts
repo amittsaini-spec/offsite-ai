@@ -39,3 +39,18 @@ export async function uploadOne(file: File, pathPrefix: string): Promise<string>
 // Mirrors what VenueMediaEditor reads — kept in sync via env so both
 // editors react to the same toggle.
 export const BLOB_READY = process.env.NEXT_PUBLIC_BLOB_READY === "true";
+
+// Module-load diagnostic so the browser DevTools console can confirm
+// what the *running* client bundle actually inlined. If you see
+// `BLOB_READY = false` here while .env says "true", you're looking at a
+// stale bundle — close the tab and reopen, don't rely on Cmd-Shift-R.
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.log(
+    "[blobUpload] BLOB_READY =",
+    BLOB_READY,
+    "(raw NEXT_PUBLIC_BLOB_READY =",
+    JSON.stringify(process.env.NEXT_PUBLIC_BLOB_READY),
+    ")",
+  );
+}
