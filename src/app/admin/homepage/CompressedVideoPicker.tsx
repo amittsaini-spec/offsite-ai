@@ -17,6 +17,18 @@ import { uploadOne } from "@/app/_components/blobUpload";
 const FFMPEG_CORE_VERSION = "0.12.10";
 const FFMPEG_CORE_BASE = `https://unpkg.com/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/umd`;
 
+// @ffmpeg/ffmpeg's ESM build has a sibling worker.js with *relative* ESM
+// imports (./const.js, ./errors.js). Letting the wrapper construct its
+// own Worker via `new URL("./worker.js", import.meta.url)` fails in
+// Next.js — webpack mangles import.meta.url, and even toBlobURL-wrapping
+// it breaks the relative imports.
+// Fix: pass classWorkerURL as a direct unpkg URL (NOT toBlobURL'd) so the
+// worker's relative ./const.js imports resolve back to unpkg siblings.
+// unpkg serves the package with access-control-allow-origin: * so the
+// cross-origin module worker loads cleanly.
+const FFMPEG_WRAPPER_VERSION = "0.12.15";
+const FFMPEG_WRAPPER_BASE = `https://unpkg.com/@ffmpeg/ffmpeg@${FFMPEG_WRAPPER_VERSION}/dist/esm`;
+
 type Phase =
   | "idle"
   | "loading"
@@ -95,7 +107,18 @@ export default function CompressedVideoPicker({
       ]);
       const ffmpeg = new FFmpeg();
 
+      // Capture ffmpeg's stderr output to the dev console so the next
+      // failure mode is diagnosable without re-reading wasm internals.
+      ffmpeg.on("log", ({ message }) => {
+        console.log("[ffmpeg]", message);
+      });
+
+      console.log("[ffmpeg] loading classWorkerURL + core…");
       await ffmpeg.load({
+        // Direct https URL, not a blob, so the worker's relative imports
+        // resolve to unpkg siblings instead of breaking.
+        classWorkerURL: `${FFMPEG_WRAPPER_BASE}/worker.js`,
+        // Core is loaded inside the worker — blob is fine here.
         coreURL: await toBlobURL(
           `${FFMPEG_CORE_BASE}/ffmpeg-core.js`,
           "text/javascript",
@@ -105,6 +128,7 @@ export default function CompressedVideoPicker({
           "application/wasm",
         ),
       });
+      console.log("[ffmpeg] loaded");
 
       // ── Compress ───────────────────────────────────────────
       setPhase("compressing");
@@ -205,9 +229,23 @@ export default function CompressedVideoPicker({
       setStatusMsg("");
       setProgress(0);
     } catch (e) {
-      console.error("Hero video compression failed", e);
+      // Log everything we can — name + message + stack — so the dev
+      // console has the full picture even after the catch.
+      const err = e as { name?: string; message?: string; stack?: string };
+      console.error("Hero video compression failed", {
+        name: err?.name,
+        message: err?.message,
+        stack: err?.stack,
+        raw: e,
+      });
       setPhase("error");
-      setError(e instanceof Error ? e.message : "Compression failed");
+      setError(
+        e instanceof Error
+          ? `${e.name}: ${e.message}`
+          : typeof e === "string"
+            ? e
+            : "Compression failed (see browser console for details)",
+      );
     }
   }
 
