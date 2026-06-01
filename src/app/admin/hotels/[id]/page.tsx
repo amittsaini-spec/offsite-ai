@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { fmt, gradFor, fromPrice, parseArray } from "@/lib/data";
+import { fmt, gradFor, fromPrice, parseArray, venueHealth } from "@/lib/data";
 import { deleteVenueAction } from "@/lib/actions";
 import ConfirmDeleteButton from "@/app/_components/ConfirmDeleteButton";
+import HealthBadge from "@/app/admin/_components/HealthBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,7 @@ export default async function HotelDetail({
                 <span style={{ fontWeight: 600 }}>
                   from {fmt(fromPrice(v.pricingOptions, v.basePrice))}
                 </span>
+                <HealthBadge venueId={v.id} health={venueHealth(v)} />
                 <span className={"pill " + (v.status === "PUBLISHED" ? "ok" : "draft")}>
                   {v.status}
                 </span>

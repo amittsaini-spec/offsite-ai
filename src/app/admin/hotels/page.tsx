@@ -1,8 +1,16 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { fmt, fromPrice, gradFor, VENUE_TYPES, parseArray } from "@/lib/data";
+import {
+  fmt,
+  fromPrice,
+  gradFor,
+  VENUE_TYPES,
+  parseArray,
+  venueHealth,
+} from "@/lib/data";
 import { toggleVenueStatusAction } from "@/lib/actions";
+import HealthBadge from "../_components/HealthBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -150,6 +158,7 @@ export default async function HotelsAndVenues({
               h.venues.map((v) => {
                 const cover = parseArray(v.photos)[0];
                 const start = fromPrice(v.pricingOptions, v.basePrice);
+                const health = venueHealth(v);
                 return (
                   <div key={v.id} className="trow">
                     <div
@@ -175,6 +184,7 @@ export default async function HotelsAndVenues({
                       className="tsp"
                       style={{ display: "flex", alignItems: "center", gap: 10 }}
                     >
+                      <HealthBadge venueId={v.id} health={health} />
                       <span
                         className={
                           "pill " + (v.status === "PUBLISHED" ? "ok" : "draft")

@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { fmt, STATUS_PILL, STATUS_LABEL, type BookingStatus } from "@/lib/data";
+import {
+  fmt,
+  STATUS_PILL,
+  STATUS_LABEL,
+  venueHealth,
+  healthTier,
+  type BookingStatus,
+} from "@/lib/data";
 import { getDashboardStats, getMonthlyRevenue } from "@/lib/booking-stats";
 import RevenueChart from "./_components/RevenueChart";
 import StatusBreakdown from "./_components/StatusBreakdown";
 
 export const dynamic = "force-dynamic";
 
+const ATTN_LIMIT = 5;
+
 export default async function Overview() {
-  const [stats, revenueSeries, recentBookings] = await Promise.all([
+  const [stats, revenueSeries, recentBookings, allVenues] = await Promise.all([
     getDashboardStats(),
     getMonthlyRevenue(6),
     prisma.bookingRequest.findMany({
@@ -16,7 +25,18 @@ export default async function Overview() {
       orderBy: { createdAt: "desc" },
       take: 6,
     }),
+    prisma.venue.findMany({
+      include: { hotel: { select: { name: true } } },
+    }),
   ]);
+
+  // Listings needing attention: venues with completeness < 100, lowest
+  // scores first. Capped to ATTN_LIMIT so the panel stays scannable.
+  const needsAttention = allVenues
+    .map((v) => ({ v, h: venueHealth(v) }))
+    .filter((x) => x.h.score < 100)
+    .sort((a, b) => a.h.score - b.h.score)
+    .slice(0, ATTN_LIMIT);
 
   return (
     <>
@@ -79,29 +99,76 @@ export default async function Overview() {
         </div>
       </div>
 
-      {/* ── Recent bookings ────────────────────────────── */}
-      <div className="panel">
-        <h3>Recent bookings</h3>
-        {recentBookings.length === 0 ? (
-          <div className="empty">No bookings yet.</div>
-        ) : (
-          recentBookings.map((b) => {
-            const status = b.status as BookingStatus;
-            return (
-              <Link key={b.id} href={`/admin/bookings/${b.id}`} className="trow">
-                <div>
-                  <div className="tmain">{b.venue.name}</div>
-                  <div className="tsub">
-                    {b.guestName} · {fmt(b.total)} · {b.eventDate || "no date"}
+      {/* ── Recent bookings + Listings needing attention ───────────── */}
+      <div className="chartrow">
+        <div className="panel">
+          <h3>Recent bookings</h3>
+          {recentBookings.length === 0 ? (
+            <div className="empty">No bookings yet.</div>
+          ) : (
+            recentBookings.map((b) => {
+              const status = b.status as BookingStatus;
+              return (
+                <Link key={b.id} href={`/admin/bookings/${b.id}`} className="trow">
+                  <div>
+                    <div className="tmain">{b.venue.name}</div>
+                    <div className="tsub">
+                      {b.guestName} · {fmt(b.total)} · {b.eventDate || "no date"}
+                    </div>
                   </div>
-                </div>
-                <span className={"tsp pill " + (STATUS_PILL[status] ?? "draft")}>
-                  {STATUS_LABEL[status] ?? b.status}
-                </span>
-              </Link>
-            );
-          })
-        )}
+                  <span className={"tsp pill " + (STATUS_PILL[status] ?? "draft")}>
+                    {STATUS_LABEL[status] ?? b.status}
+                  </span>
+                </Link>
+              );
+            })
+          )}
+        </div>
+
+        <div className="panel">
+          <h3>
+            Listings needing attention
+            {needsAttention.length > 0 && (
+              <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+                {" "}
+                ({needsAttention.length})
+              </span>
+            )}
+          </h3>
+          {needsAttention.length === 0 ? (
+            <div className="empty">All listings are 100% complete. 🎉</div>
+          ) : (
+            needsAttention.map(({ v, h }) => {
+              const tier = healthTier(h.score);
+              // Show up to 3 missing items inline; the badge tooltip has the
+              // full list. Comma-joined so the row stays compact.
+              const top = h.missing.slice(0, 3).map((m) => m.label);
+              return (
+                <Link
+                  key={v.id}
+                  href={`/admin/venues/${v.id}/edit`}
+                  className="attn-row"
+                >
+                  <div className="attn-main">
+                    <div className="attn-name">
+                      {v.name}{" "}
+                      <span style={{ color: "var(--muted)", fontWeight: 500 }}>
+                        — {v.hotel.name}
+                      </span>
+                    </div>
+                    <div className="attn-missing">
+                      <strong>To do:</strong> {top.join(" · ")}
+                      {h.missing.length > top.length && " …"}
+                    </div>
+                  </div>
+                  <span className={`hb-pill hb-${tier}`} style={{ flexShrink: 0 }}>
+                    {h.score}%
+                  </span>
+                </Link>
+              );
+            })
+          )}
+        </div>
       </div>
     </>
   );

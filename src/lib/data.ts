@@ -6,6 +6,102 @@
 // are unaffected by this flag.
 export const HIDE_VENUES_WITHOUT_PHOTOS = true;
 
+// ─── Listing health (completeness score) ──────────────────────
+// Single source of truth used by the row badges and the dashboard
+// "Listings needing attention" widget. Weights total 100. A venue at
+// 100% is fully ready to sell.
+export type HealthCheck = {
+  key: string;
+  label: string;       // action verb — used in "what's missing" lists
+  weight: number;
+  ok: boolean;
+};
+export type VenueHealth = {
+  score: number;             // 0-100
+  checks: HealthCheck[];     // all checks, with ok flag
+  missing: HealthCheck[];    // subset where ok === false
+};
+
+// Fields read by venueHealth — keep this narrow so callers don't have to
+// pass the whole Venue row when they only need the scoring inputs.
+export type VenueHealthInput = {
+  photos: string;
+  description: string;
+  pricingOptions: string;
+  layouts: string;
+  included: string;
+  tourUrl: string;
+  videoUrl: string;
+};
+
+export function venueHealth(v: VenueHealthInput): VenueHealth {
+  const photos = parseArray(v.photos);
+  const opts = parsePricingOptions(v.pricingOptions);
+  const layoutsObj = parseObj(v.layouts);
+  const included = parseArray(v.included);
+
+  const checks: HealthCheck[] = [
+    {
+      key: "cover",
+      label: "Upload a cover photo",
+      weight: 20,
+      ok: photos.length > 0,
+    },
+    {
+      key: "photos3",
+      label: "Upload at least 3 photos",
+      weight: 15,
+      ok: photos.length >= 3,
+    },
+    {
+      key: "description",
+      label: "Write a longer description (40+ characters)",
+      weight: 15,
+      ok: (v.description ?? "").trim().length >= 40,
+    },
+    {
+      key: "pricing",
+      label: "Add at least one pricing option",
+      weight: 15,
+      ok: opts.length > 0,
+    },
+    {
+      key: "layouts",
+      label: "Set layouts and capacities",
+      weight: 10,
+      ok: Object.keys(layoutsObj).length > 0,
+    },
+    {
+      key: "included",
+      label: "List what's included",
+      weight: 10,
+      ok: included.length > 0,
+    },
+    {
+      key: "tour",
+      label: "Add a 360° virtual tour URL",
+      weight: 10,
+      ok: (v.tourUrl ?? "").trim().length > 0,
+    },
+    {
+      key: "video",
+      label: "Add a video",
+      weight: 5,
+      ok: (v.videoUrl ?? "").trim().length > 0,
+    },
+  ];
+
+  const score = checks.reduce((s, c) => s + (c.ok ? c.weight : 0), 0);
+  const missing = checks.filter((c) => !c.ok);
+  return { score, checks, missing };
+}
+
+export function healthTier(score: number): "ok" | "warn" | "bad" {
+  if (score >= 90) return "ok";
+  if (score >= 70) return "warn";
+  return "bad";
+}
+
 // ─── Markets (launch destinations) ───
 // Curated list of cities the marketplace operates in. Hotel rows carry a
 // `market` String column; the server actions validate against this list
