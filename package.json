@@ -11,6 +11,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:backfill-pricing": "tsx prisma/backfill-pricing.ts",
     "db:seed-home": "tsx prisma/seed-home.ts",
+    "db:seed-demo-blackouts": "tsx prisma/seed-demo-blackouts.ts",
+    "db:clear-demo-blackouts": "tsx prisma/seed-demo-blackouts.ts --clear",
     "postinstall": "prisma generate"
   },
   "dependencies": {

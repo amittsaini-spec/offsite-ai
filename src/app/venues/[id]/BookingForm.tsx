@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, DayButton as RDPDayButton } from "react-day-picker";
 import { quote, fmt, fromYMD, toYMD, type PricingOption } from "@/lib/data";
 import { createBookingAction } from "@/lib/actions";
 
@@ -32,6 +32,10 @@ export default function BookingForm({
     () => unavailableDates.map(fromYMD),
     [unavailableDates],
   );
+  const unavailableSet = useMemo(
+    () => new Set(unavailableDates),
+    [unavailableDates],
+  );
 
   // Today at local midnight so the picker won't disable "today" itself.
   const today = useMemo(() => {
@@ -39,6 +43,17 @@ export default function BookingForm({
     t.setHours(0, 0, 0, 0);
     return t;
   }, []);
+
+  // Matchers drive the color-coded cell styling. Date comparison is at
+  // local midnight, matching `today`.
+  const availableMatcher = useMemo(
+    () => (d: Date) => d >= today && !unavailableSet.has(toYMD(d)),
+    [today, unavailableSet],
+  );
+  const unavailableMatcher = useMemo(
+    () => (d: Date) => d >= today && unavailableSet.has(toYMD(d)),
+    [today, unavailableSet],
+  );
 
   const formattedDate = date
     ? date.toLocaleDateString(undefined, {
@@ -96,7 +111,34 @@ export default function BookingForm({
           disabled={[{ before: today }, ...unavailable]}
           numberOfMonths={1}
           weekStartsOn={0}
+          modifiers={{
+            available: availableMatcher,
+            unavailable: unavailableMatcher,
+          }}
+          modifiersClassNames={{
+            available: "rdp-mod-available",
+            unavailable: "rdp-mod-unavailable",
+          }}
+          components={{
+            DayButton: (props) => {
+              const { modifiers } = props;
+              const title = modifiers.unavailable
+                ? "Unavailable"
+                : modifiers.available
+                  ? "Available"
+                  : "";
+              return <RDPDayButton {...props} title={title} />;
+            },
+          }}
         />
+      </div>
+      <div className="callegend">
+        <span className="callegend-item">
+          <span className="callegend-sw callegend-sw-avail" /> Available
+        </span>
+        <span className="callegend-item">
+          <span className="callegend-sw callegend-sw-unavail" /> Unavailable
+        </span>
       </div>
 
       <form action={createBookingAction}>

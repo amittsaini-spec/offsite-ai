@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, DayButton as RDPDayButton } from "react-day-picker";
 import { fromYMD, toYMD } from "@/lib/data";
 
 type Props = {
@@ -13,6 +13,11 @@ type Props = {
 // (e.g. a property buyout, maintenance, or pre-sold-but-not-yet-confirmed).
 // CONFIRMED bookings are surfaced inline so the agent sees the full picture,
 // but those are read-only — the public booking flow already blocks them.
+//
+// Color coding mirrors the public calendar:
+//   green tint  → Open
+//   coral fill  → Blackout (admin-toggled)
+//   emerald ring → Booked (CONFIRMED / DEPOSIT_HELD / COMPLETED)
 export default function BlackoutCalendar({ initialBlackouts, confirmedDates }: Props) {
   const [blackouts, setBlackouts] = useState<Set<string>>(
     () => new Set(initialBlackouts),
@@ -26,6 +31,23 @@ export default function BlackoutCalendar({ initialBlackouts, confirmedDates }: P
   const confirmedDays = useMemo(
     () => confirmedDates.map(fromYMD),
     [confirmedDates],
+  );
+
+  // Today at local midnight so matchers compare cleanly.
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
+
+  // Any future date that's neither toggled-blackout nor a real booking is "Open".
+  const openMatcher = useMemo(
+    () => (d: Date) => {
+      if (d < today) return false;
+      const ymd = toYMD(d);
+      return !blackouts.has(ymd) && !confirmedSet.has(ymd);
+    },
+    [today, blackouts, confirmedSet],
   );
 
   function toggle(day: Date) {
@@ -52,12 +74,14 @@ export default function BlackoutCalendar({ initialBlackouts, confirmedDates }: P
         mode="single"
         numberOfMonths={2}
         weekStartsOn={0}
-        disabled={{ before: new Date() }}
+        disabled={{ before: today }}
         modifiers={{
+          open: openMatcher,
           blackout: blackoutDays,
           confirmed: confirmedDays,
         }}
         modifiersClassNames={{
+          open: "rdp-mod-open",
           blackout: "rdp-blackout",
           confirmed: "rdp-confirmed",
         }}
@@ -65,42 +89,56 @@ export default function BlackoutCalendar({ initialBlackouts, confirmedDates }: P
           if (modifiers.disabled) return;
           toggle(day);
         }}
+        components={{
+          DayButton: (props) => {
+            const { modifiers } = props;
+            const title = modifiers.confirmed
+              ? "Booked"
+              : modifiers.blackout
+                ? "Blackout"
+                : modifiers.open
+                  ? "Open"
+                  : "";
+            return <RDPDayButton {...props} title={title} />;
+          },
+        }}
         className="rdp-admin"
       />
+
+      <div className="callegend" style={{ marginTop: 16 }}>
+        <span className="callegend-item">
+          <span className="callegend-sw callegend-sw-avail" /> Open
+        </span>
+        <span className="callegend-item">
+          <span className="callegend-sw callegend-sw-blackout" /> Blackout
+        </span>
+        <span className="callegend-item">
+          <span className="callegend-sw callegend-sw-booked" /> Booked (read-only)
+        </span>
+        <span className="callegend-item">
+          <span className="callegend-sw callegend-sw-today" /> Today
+        </span>
+      </div>
 
       <div
         style={{
           display: "flex",
           gap: 18,
-          marginTop: 16,
+          marginTop: 12,
           fontSize: 13,
           color: "var(--ink-2)",
           flexWrap: "wrap",
         }}
       >
-        <Legend swatch="var(--coral)" label={`${blackouts.size} blackout date${blackouts.size === 1 ? "" : "s"}`} />
-        <Legend
-          swatch="var(--emerald)"
-          label={`${confirmedDates.length} confirmed booking${confirmedDates.length === 1 ? "" : "s"} (read-only)`}
-        />
+        <span>
+          <strong>{blackouts.size}</strong> blackout date
+          {blackouts.size === 1 ? "" : "s"}
+        </span>
+        <span>
+          <strong>{confirmedDates.length}</strong> confirmed booking
+          {confirmedDates.length === 1 ? "" : "s"} (read-only)
+        </span>
       </div>
     </div>
-  );
-}
-
-function Legend({ swatch, label }: { swatch: string; label: string }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <span
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: "50%",
-          background: swatch,
-          display: "inline-block",
-        }}
-      />
-      {label}
-    </span>
   );
 }

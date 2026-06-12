@@ -227,49 +227,140 @@ input,select,textarea{ font-family:inherit; }
 .bookwrap{ position:sticky; top:96px; align-self:start; }
 .bsec{ margin:18px 0 10px; font-size:12.5px; font-weight:700; letter-spacing:.06em;
   text-transform:uppercase; color:var(--muted); }
-.bookcal{ border:1px solid var(--line); border-radius:14px; padding:8px 10px; background:var(--white); }
+.bookcal{ border:1px solid var(--line); border-radius:14px; padding:10px 12px; background:var(--white); }
+/* Compact legend under the public booking calendar. */
+.callegend{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:10px;
+  font-size:12px; color:var(--ink-2); }
+.callegend-item{ display:inline-flex; align-items:center; gap:6px; }
+.callegend-sw{ width:11px; height:11px; border-radius:3px; border:1px solid var(--line); display:inline-block; }
+.callegend-sw-avail{ background:rgba(15,61,48,.16); border-color:rgba(15,61,48,.38); }
+.callegend-sw-unavail{ background:rgba(223,91,59,.22); border-color:rgba(223,91,59,.50); }
+.callegend-sw-blackout{ background:var(--coral); border-color:var(--coral-d); }
+.callegend-sw-booked{ background:rgba(15,61,48,.12); border-color:var(--emerald);
+  box-shadow:inset 0 0 0 1px var(--emerald); }
+.callegend-sw-today{ background:var(--white); border-color:var(--emerald);
+  box-shadow:inset 0 0 0 2px var(--emerald); }
 .bcta:disabled{ background:var(--sand-200); color:var(--muted); cursor:not-allowed; }
 .bcta:disabled:hover{ background:var(--sand-200); }
 
-/* react-day-picker overrides — match Fraunces/emerald/coral palette */
+/* react-day-picker overrides — match Fraunces/emerald/coral palette.
+   Calendar cells are color-coded:
+     · default empty day      → faint sand card
+     · .rdp-mod-available     → soft emerald tint  (public: "Available")
+     · .rdp-mod-unavailable   → soft coral tint    (public: "Unavailable")
+     · .rdp-mod-open          → soft emerald tint  (admin: "Open")
+     · .rdp-blackout          → coral fill         (admin: "Blackout")
+     · .rdp-confirmed         → emerald ring       (admin: "Booked")
+     · .rdp-today             → emerald ring around whatever the cell is
+     · .rdp-disabled (past)   → muted, no fill                                 */
 .rdp-root{
   --rdp-accent-color: var(--emerald);
   --rdp-accent-background-color: rgba(15,61,48,.08);
-  --rdp-day-height: 38px;
-  --rdp-day-width: 38px;
-  --rdp-day_button-height: 36px;
-  --rdp-day_button-width: 36px;
-  --rdp-day_button-border-radius: 999px;
+  --rdp-day-height: 44px;
+  --rdp-day-width: 44px;
+  --rdp-day_button-height: 38px;
+  --rdp-day_button-width: 38px;
+  --rdp-day_button-border-radius: 9px;
   --rdp-selected-border: 2px solid var(--emerald);
-  --rdp-today-color: var(--coral);
+  --rdp-today-color: var(--emerald);
   --rdp-outside-opacity: .35;
-  --rdp-disabled-opacity: .35;
+  --rdp-disabled-opacity: 1;
   font-family:'Hanken Grotesk',sans-serif;
   color:var(--ink);
 }
 .rdp-root .rdp-caption_label{ font-family:'Fraunces',serif; font-weight:500; font-size:17px; color:var(--ink); }
 .rdp-root .rdp-weekday{ font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;
-  text-transform:uppercase; }
-.rdp-root .rdp-day_button{ font-size:14px; font-weight:500; }
-.rdp-root .rdp-day_button:hover:not([disabled]){ background:rgba(15,61,48,.06); }
-.rdp-root .rdp-selected .rdp-day_button{ background:var(--emerald) !important; color:#fff !important; }
+  text-transform:uppercase; padding-bottom:6px; }
+.rdp-root .rdp-day{ padding:2px; }
+.rdp-root .rdp-day_button{
+  font-size:13.5px; font-weight:500;
+  border:1px solid var(--line);
+  background:var(--white);
+  border-radius:9px;
+  transition:background .12s, border-color .12s, box-shadow .12s;
+}
+.rdp-root .rdp-day_button:hover:not([disabled]){
+  border-color:var(--emerald);
+  box-shadow:0 0 0 1px var(--emerald);
+}
 .rdp-root .rdp-disabled{ text-decoration:none; }
-.rdp-root .rdp-disabled .rdp-day_button{ color:var(--muted); opacity:.45; cursor:not-allowed; }
-.rdp-root .rdp-disabled .rdp-day_button:hover{ background:transparent !important; }
+.rdp-root .rdp-disabled .rdp-day_button{
+  background:transparent;
+  border-color:var(--line);
+  color:var(--muted);
+  opacity:.45;
+  cursor:not-allowed;
+}
+.rdp-root .rdp-disabled .rdp-day_button:hover{
+  border-color:var(--line) !important;
+  box-shadow:none !important;
+  background:transparent !important;
+}
+.rdp-root .rdp-outside .rdp-day_button{ background:transparent; border-color:transparent; }
 .rdp-root .rdp-chevron{ fill:var(--ink-2); }
 .rdp-root .rdp-nav button:hover{ background:var(--sand-100); }
 
+/* Available (public) / Open (admin) — emerald tint, dialed up to clearly read as green */
+.rdp-root .rdp-mod-available .rdp-day_button,
+.rdp-root .rdp-mod-open .rdp-day_button{
+  background:rgba(15,61,48,.16);
+  border-color:rgba(15,61,48,.38);
+  color:var(--emerald);
+}
+.rdp-root .rdp-mod-available .rdp-day_button:hover:not([disabled]),
+.rdp-root .rdp-mod-open .rdp-day_button:hover:not([disabled]){
+  background:rgba(15,61,48,.26);
+  border-color:var(--emerald);
+  box-shadow:0 0 0 1px var(--emerald);
+}
+
+/* Unavailable (public, covers blackouts + confirmed) — coral tint, dialed up to clearly read as red */
+.rdp-root .rdp-mod-unavailable .rdp-day_button{
+  background:rgba(223,91,59,.22) !important;
+  border-color:rgba(223,91,59,.50) !important;
+  color:var(--coral-d) !important;
+  opacity:1 !important;
+  cursor:not-allowed;
+  text-decoration:line-through;
+}
+.rdp-root .rdp-mod-unavailable .rdp-day_button:hover{
+  background:rgba(223,91,59,.22) !important;
+  border-color:rgba(223,91,59,.50) !important;
+  box-shadow:none !important;
+}
+
+/* Today — emerald ring around whatever the cell already looks like */
+.rdp-root .rdp-today:not(.rdp-selected) .rdp-day_button{
+  box-shadow:inset 0 0 0 2px var(--emerald);
+  font-weight:700;
+}
+
+/* Selected (single-mode public picker) — solid emerald, beats everything */
+.rdp-root .rdp-selected .rdp-day_button{
+  background:var(--emerald) !important;
+  color:#fff !important;
+  border-color:var(--emerald) !important;
+  opacity:1 !important;
+  text-decoration:none !important;
+}
+
 /* admin blackout calendar — coral fill on toggled dates, emerald ring on confirmed */
 .rdp-admin .rdp-day.rdp-blackout .rdp-day_button{
-  background:var(--coral) !important; color:#fff !important;
+  background:var(--coral) !important;
+  color:#fff !important;
+  border-color:var(--coral-d) !important;
+  opacity:1 !important;
+  text-decoration:none;
 }
 .rdp-admin .rdp-day.rdp-confirmed .rdp-day_button{
-  background:rgba(15,61,48,.1) !important; color:var(--emerald) !important;
+  background:rgba(15,61,48,.12) !important;
+  color:var(--emerald) !important;
+  border-color:var(--emerald) !important;
   box-shadow:inset 0 0 0 2px var(--emerald);
   cursor:not-allowed;
 }
 .rdp-admin .rdp-day.rdp-confirmed .rdp-day_button:hover{
-  background:rgba(15,61,48,.1) !important;
+  background:rgba(15,61,48,.12) !important;
 }
 .book{ border:1px solid var(--line); border-radius:20px; padding:24px; background:var(--white); box-shadow:var(--shadow); }
 .book .bp{ font-family:'Fraunces',serif; font-size:30px; font-weight:600; }
