@@ -77,8 +77,8 @@ const FALLBACK_COLLECTIONS = [
 ];
 
 const FALLBACK_SECTIONS = [
-  { id: "fb-1", title: "Hot picks in Cancún", subtitle: "The venues groups are reserving right now", filterType: "tag", filterValue: "Hot Pick", sortOrder: 0, enabled: true },
-  { id: "fb-2", title: "Garden venues", subtitle: "Lawns, courtyards and tropical gardens", filterType: "type", filterValue: "Garden", sortOrder: 1, enabled: true },
+  { id: "fb-1", title: "Hot picks in Cancún", subtitle: "The venues groups are reserving right now", selectionMode: "auto", filterType: "tag", filterValue: "Hot Pick", featuredVenueIds: "[]", sortOrder: 0, enabled: true },
+  { id: "fb-2", title: "Garden venues", subtitle: "Lawns, courtyards and tropical gardens", selectionMode: "auto", filterType: "type", filterValue: "Garden", featuredVenueIds: "[]", sortOrder: 1, enabled: true },
 ];
 
 // Render *asterisk-wrapped* words as <em>.
@@ -95,7 +95,14 @@ function collectionHref(linkType: string, linkValue: string): string {
   else p.set("type", linkValue);
   return `/venues?${p.toString()}`;
 }
-function sectionHref(filterType: string, filterValue: string): string {
+function sectionHref(
+  selectionMode: string,
+  filterType: string,
+  filterValue: string,
+): string {
+  // Manual sections don't correspond to a single filter, so the "See all"
+  // link just falls back to the full browse page.
+  if (selectionMode === "manual") return "/venues";
   if (filterType === "tag" && filterValue) return `/venues?tag=${encodeURIComponent(filterValue)}`;
   if (filterType === "type" && filterValue) return `/venues?type=${encodeURIComponent(filterValue)}`;
   return "/venues";
@@ -236,7 +243,10 @@ export default async function Home() {
 
       {/* ─── VENUE FEEDS (HomeSection rows) ─────────────────────────── */}
       {visibleSections.map((s) => {
-        const matches = filterVenues(venues, s.filterType, s.filterValue).slice(0, 3);
+        const matches =
+          s.selectionMode === "manual"
+            ? pickVenuesInOrder(allPublished, parseArray(s.featuredVenueIds)).slice(0, 4)
+            : filterVenues(venues, s.filterType, s.filterValue).slice(0, 4);
         if (matches.length === 0) return null;
         return (
           <div className="section" key={s.id}>
@@ -245,7 +255,10 @@ export default async function Home() {
                 <h2>{s.title}</h2>
                 <p>{s.subtitle}</p>
               </div>
-              <Link href={sectionHref(s.filterType, s.filterValue)} className="see">
+              <Link
+                href={sectionHref(s.selectionMode, s.filterType, s.filterValue)}
+                className="see"
+              >
                 See all →
               </Link>
             </div>
@@ -359,6 +372,20 @@ export default async function Home() {
 type V = Awaited<ReturnType<typeof prisma.venue.findMany>>[number] & {
   hotel: { name: string; city: string };
 };
+
+// Manual mode: take admin-picked venue ids, return matching venues in that
+// exact order. Skips ids the admin picked but that no longer exist or are
+// no longer PUBLISHED, instead of leaving holes in the row.
+function pickVenuesInOrder(venues: V[], ids: string[]): V[] {
+  if (ids.length === 0) return [];
+  const byId = new Map(venues.map((v) => [v.id, v] as const));
+  const out: V[] = [];
+  for (const id of ids) {
+    const v = byId.get(id);
+    if (v) out.push(v);
+  }
+  return out;
+}
 
 function filterVenues(venues: V[], filterType: string, filterValue: string): V[] {
   if (filterType === "tag" && filterValue) {

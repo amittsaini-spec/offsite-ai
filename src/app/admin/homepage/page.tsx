@@ -55,10 +55,20 @@ export default async function Homepage({
 }) {
   const { saved, error } = await searchParams;
 
-  const [site, collections, sections] = await Promise.all([
+  const [site, collections, sections, venuesForPicker] = await Promise.all([
     prisma.siteSettings.findUnique({ where: { id: "home" } }),
     prisma.homeCollection.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.homeSection.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.venue.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        hotel: { select: { name: true, city: true } },
+      },
+    }),
   ]);
 
   const heroInitial = {
@@ -87,15 +97,26 @@ export default async function Homepage({
     const ft = ["tag", "type", "featured"].includes(s.filterType)
       ? (s.filterType as "tag" | "type" | "featured")
       : "tag";
+    const mode = s.selectionMode === "manual" ? "manual" : "auto";
     return {
       id: s.id,
       title: s.title,
       subtitle: s.subtitle,
+      selectionMode: mode as "auto" | "manual",
       filterType: ft,
       filterValue: s.filterValue,
+      featuredVenueIds: parseArray(s.featuredVenueIds),
       enabled: s.enabled,
     };
   });
+
+  const venuePickerOptions = venuesForPicker.map((v) => ({
+    id: v.id,
+    name: v.name,
+    type: v.type,
+    hotelName: v.hotel?.name ?? "",
+    city: v.hotel?.city ?? "",
+  }));
 
   return (
     <>
@@ -200,7 +221,10 @@ export default async function Homepage({
           </span>
         </h3>
         <div style={{ padding: 22 }}>
-          <HomeSectionsEditor initial={sectionsInitial} />
+          <HomeSectionsEditor
+            initial={sectionsInitial}
+            venues={venuePickerOptions}
+          />
         </div>
       </div>
 

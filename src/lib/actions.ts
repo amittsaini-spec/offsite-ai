@@ -588,15 +588,24 @@ export async function saveHomeSectionsAction(formData: FormData) {
   }
 
   const allowedFilters = new Set(["tag", "type", "featured"]);
+  const allowedModes = new Set(["auto", "manual"]);
   const rows = (parsed as unknown[])
     .map((r, i) => {
       const o = (r ?? {}) as Record<string, unknown>;
       const filterType = String(o.filterType ?? "tag");
+      const selectionMode = String(o.selectionMode ?? "auto");
+      const ids = Array.isArray(o.featuredVenueIds)
+        ? (o.featuredVenueIds as unknown[])
+            .map((x) => String(x ?? "").trim())
+            .filter(Boolean)
+        : [];
       return {
         title: String(o.title ?? "").trim(),
         subtitle: String(o.subtitle ?? "").trim(),
+        selectionMode: allowedModes.has(selectionMode) ? selectionMode : "auto",
         filterType: allowedFilters.has(filterType) ? filterType : "tag",
         filterValue: String(o.filterValue ?? "").trim(),
+        featuredVenueIds: JSON.stringify(ids),
         enabled: o.enabled !== false,
         sortOrder: i,
       };

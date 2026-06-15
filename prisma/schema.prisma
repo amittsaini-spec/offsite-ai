@@ -50,11 +50,15 @@ model HomeSection {
   id          String   @id @default(cuid())
   title       String
   subtitle    String
-  filterType  String   @default("tag")  // "tag" | "type" | "featured"
-  filterValue String   @default("")
-  sortOrder   Int      @default(0)
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  // "auto"  → use filterType/filterValue to pull venues (legacy behavior)
+  // "manual" → use the ordered featuredVenueIds list verbatim
+  selectionMode    String  @default("auto")
+  filterType       String  @default("tag")  // "tag" | "type" | "featured"
+  filterValue      String  @default("")
+  featuredVenueIds String  @default("[]")   // JSON array of Venue.id in display order
+  sortOrder        Int     @default(0)
+  enabled          Boolean @default(true)
+  createdAt        DateTime @default(now())
 }
 
 // DestaLabs team members who act as the agent managing all hotels.

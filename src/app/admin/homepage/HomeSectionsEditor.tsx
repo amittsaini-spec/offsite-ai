@@ -5,29 +5,54 @@ import { saveHomeSectionsAction } from "@/lib/actions";
 import { VENUE_TYPES, KNOWN_TAGS } from "@/lib/data";
 
 type FilterType = "tag" | "type" | "featured";
+type SelectionMode = "auto" | "manual";
+
 type Section = {
   id?: string;
   title: string;
   subtitle: string;
+  selectionMode: SelectionMode;
   filterType: FilterType;
   filterValue: string;
+  featuredVenueIds: string[];
   enabled: boolean;
+};
+
+export type VenueOption = {
+  id: string;
+  name: string;
+  type: string;
+  hotelName: string;
+  city: string;
 };
 
 const EMPTY: Section = {
   title: "",
   subtitle: "",
+  selectionMode: "auto",
   filterType: "tag",
   filterValue: "",
+  featuredVenueIds: [],
   enabled: true,
 };
 
-export default function HomeSectionsEditor({ initial }: { initial: Section[] }) {
+export default function HomeSectionsEditor({
+  initial,
+  venues,
+}: {
+  initial: Section[];
+  venues: VenueOption[];
+}) {
   const [rows, setRows] = useState<Section[]>(
     initial.length > 0 ? initial : [{ ...EMPTY }],
   );
 
   const json = useMemo(() => JSON.stringify(rows), [rows]);
+  const venueById = useMemo(() => {
+    const m = new Map<string, VenueOption>();
+    for (const v of venues) m.set(v.id, v);
+    return m;
+  }, [venues]);
 
   function update(i: number, patch: Partial<Section>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -61,6 +86,8 @@ export default function HomeSectionsEditor({ initial }: { initial: Section[] }) 
           key={i}
           index={i}
           row={row}
+          venues={venues}
+          venueById={venueById}
           update={(patch) => update(i, patch)}
           remove={() => remove(i)}
           up={() => move(i, -1)}
@@ -86,6 +113,8 @@ export default function HomeSectionsEditor({ initial }: { initial: Section[] }) 
 function SectionRow({
   index,
   row,
+  venues,
+  venueById,
   update,
   remove,
   up,
@@ -95,6 +124,8 @@ function SectionRow({
 }: {
   index: number;
   row: Section;
+  venues: VenueOption[];
+  venueById: Map<string, VenueOption>;
   update: (p: Partial<Section>) => void;
   remove: () => void;
   up: () => void;
@@ -107,6 +138,7 @@ function SectionRow({
   // editor doesn't suggest typing something that won't be used.
   const showValue = row.filterType !== "featured";
   const options = row.filterType === "type" ? VENUE_TYPES : KNOWN_TAGS;
+  const isManual = row.selectionMode === "manual";
 
   return (
     <div
@@ -142,45 +174,73 @@ function SectionRow({
             </div>
           </div>
 
-          <div className="fgrid">
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label>Filter kind</label>
-              <select
-                className="input"
-                value={row.filterType}
-                onChange={(e) =>
-                  update({
-                    filterType: e.target.value as FilterType,
-                    filterValue:
-                      e.target.value === "featured" ? "" : row.filterValue,
-                  })
-                }
-              >
-                <option value="tag">Filter by tag</option>
-                <option value="type">Filter by venue type</option>
-                <option value="featured">Featured (Hot Pick)</option>
-              </select>
-            </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label>Value</label>
-              <input
-                className="input"
-                value={row.filterValue}
-                onChange={(e) => update({ filterValue: e.target.value })}
-                placeholder={
-                  row.filterType === "type" ? "Garden" : "Hot Pick"
-                }
-                list={`sectionv-${index}`}
-                disabled={!showValue}
-                style={{ opacity: showValue ? 1 : 0.5 }}
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>How venues are chosen</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <ModeChip
+                active={!isManual}
+                onClick={() => update({ selectionMode: "auto" })}
+                label="Auto — filter by tag/type"
               />
-              <datalist id={`sectionv-${index}`}>
-                {options.map((v) => (
-                  <option key={v} value={v} />
-                ))}
-              </datalist>
+              <ModeChip
+                active={isManual}
+                onClick={() => update({ selectionMode: "manual" })}
+                label="Manual — hand-pick venues"
+              />
             </div>
           </div>
+
+          {!isManual && (
+            <div className="fgrid">
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Filter kind</label>
+                <select
+                  className="input"
+                  value={row.filterType}
+                  onChange={(e) =>
+                    update({
+                      filterType: e.target.value as FilterType,
+                      filterValue:
+                        e.target.value === "featured" ? "" : row.filterValue,
+                    })
+                  }
+                >
+                  <option value="tag">Filter by tag</option>
+                  <option value="type">Filter by venue type</option>
+                  <option value="featured">Featured (Hot Pick)</option>
+                </select>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Value</label>
+                <input
+                  className="input"
+                  value={row.filterValue}
+                  onChange={(e) => update({ filterValue: e.target.value })}
+                  placeholder={
+                    row.filterType === "type" ? "Garden" : "Hot Pick"
+                  }
+                  list={`sectionv-${index}`}
+                  disabled={!showValue}
+                  style={{ opacity: showValue ? 1 : 0.5 }}
+                />
+                <datalist id={`sectionv-${index}`}>
+                  {options.map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+          )}
+
+          {isManual && (
+            <ManualPicker
+              index={index}
+              selectedIds={row.featuredVenueIds}
+              venues={venues}
+              venueById={venueById}
+              onChange={(ids) => update({ featuredVenueIds: ids })}
+            />
+          )}
 
           <label
             style={{
@@ -249,6 +309,272 @@ function SectionRow({
             Remove
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ModeChip({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="fchip"
+      style={{
+        cursor: "pointer",
+        background: active ? "var(--emerald)" : undefined,
+        color: active ? "#fff" : undefined,
+        borderColor: active ? "var(--emerald)" : undefined,
+        fontWeight: active ? 600 : undefined,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ManualPicker({
+  index,
+  selectedIds,
+  venues,
+  venueById,
+  onChange,
+}: {
+  index: number;
+  selectedIds: string[];
+  venues: VenueOption[];
+  venueById: Map<string, VenueOption>;
+  onChange: (ids: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const selected = selectedIds
+    .map((id) => venueById.get(id))
+    .filter((v): v is VenueOption => Boolean(v));
+
+  const selectedSet = new Set(selectedIds);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return venues
+      .filter((v) => !selectedSet.has(v.id))
+      .filter((v) => {
+        return (
+          v.name.toLowerCase().includes(q) ||
+          v.hotelName.toLowerCase().includes(q) ||
+          v.city.toLowerCase().includes(q) ||
+          v.type.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 8);
+  }, [query, venues, selectedSet]);
+
+  function addId(id: string) {
+    if (selectedSet.has(id)) return;
+    onChange([...selectedIds, id]);
+    setQuery("");
+  }
+  function removeId(id: string) {
+    onChange(selectedIds.filter((x) => x !== id));
+  }
+  function moveId(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= selectedIds.length) return;
+    const next = [...selectedIds];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+
+  return (
+    <div
+      style={{
+        border: "1px dashed var(--line)",
+        borderRadius: 12,
+        padding: 14,
+        background: "#fff",
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      <div className="field" style={{ marginBottom: 0, position: "relative" }}>
+        <label>Add venues</label>
+        <input
+          className="input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by venue or hotel name…"
+          autoComplete="off"
+        />
+        {matches.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: 4,
+              background: "#fff",
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              boxShadow: "0 10px 24px rgba(0,0,0,0.08)",
+              zIndex: 5,
+              overflow: "hidden",
+            }}
+          >
+            {matches.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => addId(v.id)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  background: "transparent",
+                  border: 0,
+                  borderBottom: "1px solid var(--line)",
+                  cursor: "pointer",
+                  fontSize: 13.5,
+                }}
+              >
+                <div style={{ fontWeight: 600, color: "var(--ink)" }}>
+                  {v.name}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                  {v.type} · {v.hotelName}
+                  {v.city ? ` · ${v.city}` : ""}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--muted)",
+            marginBottom: 6,
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: 0.4,
+          }}
+        >
+          Featured venues ({selected.length})
+        </div>
+
+        {selected.length === 0 && (
+          <div
+            className="empty"
+            style={{ padding: 14, fontSize: 13, color: "var(--muted)" }}
+          >
+            No venues picked yet — search above to add some.
+          </div>
+        )}
+
+        {selected.length > 0 && (
+          <div style={{ display: "grid", gap: 6 }}>
+            {selected.map((v, i) => (
+              <div
+                key={`${index}-${v.id}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  border: "1px solid var(--line)",
+                  borderRadius: 10,
+                  background: "var(--sand-50)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "var(--muted)",
+                    minWidth: 18,
+                    textAlign: "center",
+                  }}
+                >
+                  {i + 1}.
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: "var(--ink)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {v.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--muted)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {v.type} · {v.hotelName}
+                    {v.city ? ` · ${v.city}` : ""}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => moveId(i, -1)}
+                  disabled={i === 0}
+                  className="pill draft"
+                  style={{
+                    cursor: i === 0 ? "not-allowed" : "pointer",
+                    opacity: i === 0 ? 0.4 : 1,
+                    fontSize: 12,
+                  }}
+                  title="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveId(i, 1)}
+                  disabled={i === selected.length - 1}
+                  className="pill draft"
+                  style={{
+                    cursor:
+                      i === selected.length - 1 ? "not-allowed" : "pointer",
+                    opacity: i === selected.length - 1 ? 0.4 : 1,
+                    fontSize: 12,
+                  }}
+                  title="Move down"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeId(v.id)}
+                  className="pill no"
+                  style={{ fontSize: 12 }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
