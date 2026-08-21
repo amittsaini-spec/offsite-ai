@@ -46,6 +46,78 @@ npm run dev                 # http://localhost:3000
 Array/object fields (tags, included, layouts, rules) are stored as JSON text so the
 schema is portable to Postgres unchanged.
 
+## Public JSON API (read-only)
+
+`/api/v1/*` exposes hotels + published venues to trusted external
+consumers — currently DWBC (the destination wedding budget calculator).
+
+**Auth.** Every request must carry the `x-api-key` header. The value must
+match the `OFFSITE_API_KEY` env var. Missing/wrong key → `401`. No key
+configured on the server → `500`.
+
+**CORS.** Preflights (`OPTIONS`) succeed for the DWBC origin
+(`https://destawed.vercel.app`); other origins get no `Access-Control-*`
+back and the browser blocks the response. Server-to-server callers are
+unaffected.
+
+**Caching.** Successful responses set
+`Cache-Control: public, s-maxage=60, stale-while-revalidate=300` so
+Vercel's edge holds each payload for 60s (with a 5-min SWR window).
+Errors are `no-store`.
+
+### `GET /api/v1/hotels`
+
+```json
+{
+  "hotels": [
+    { "id": "cxx…", "name": "The Ritz-Carlton, Cancún", "city": "Cancún",
+      "cover": "https://…/blob/…jpg" }
+  ]
+}
+```
+
+`cover` is the first photo of the hotel's first PUBLISHED venue, or `null`.
+
+### `GET /api/v1/hotels/{id}`
+
+```json
+{
+  "id": "cxx…",
+  "name": "…", "brand": "…", "description": "…",
+  "market": "Cancún", "address": "…", "city": "…",
+  "region": "…", "country": "…",
+  "latitude": 21.16, "longitude": -86.85,
+  "cover": "https://…/blob/…jpg",
+  "venues": [
+    {
+      "id": "cvv…",
+      "name": "Oceanfront Terrace",
+      "type": "Beachfront",
+      "description": "…",
+      "seated": 180, "standing": 260, "sqft": 3200,
+      "pricingOptions": [
+        { "label": "Half-day · 4 hours", "durationHours": 4, "price": 8500 }
+      ],
+      "cover": "https://…/blob/…jpg",
+      "photos": ["https://…/blob/…jpg"],
+      "blackoutDates": ["2026-08-14", "2026-09-02"]
+    }
+  ]
+}
+```
+
+Only `PUBLISHED` venues are returned. `blackoutDates` is the practical
+"can't be booked" set — admin-set blackouts merged with dates from
+CONFIRMED / DEPOSIT_HELD / COMPLETED bookings, deduped and sorted.
+Unknown hotel id → `404`.
+
+### Example
+
+```bash
+curl -H "x-api-key: $OFFSITE_API_KEY" \
+  https://<your-vercel-domain>/api/v1/hotels
+```
+
 ## The payment seam (next layer)
 
 Booking is **concierge-first** right now: a request is recorded and the deposit amount
