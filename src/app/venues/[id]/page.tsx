@@ -11,6 +11,8 @@ import {
   eventsForType,
   isIndoor,
   BLOCKING_STATUSES,
+  fmt,
+  fromPrice,
 } from "@/lib/data";
 import SiteNav from "../../_components/SiteNav";
 import BookingForm from "./BookingForm";
@@ -276,7 +278,7 @@ export default async function VenueDetail({
             </div>
           </div>
 
-          <div className="bookwrap">
+          <div className="bookwrap" id="book">
             {booked ? (
               <div className="book">
                 <div className="booked">
@@ -309,6 +311,22 @@ export default async function VenueDetail({
           </div>
         </div>
       </div>
+
+      {/* Phones only: the booking card sits below the whole listing, so
+          keep the price and a jump link pinned to the bottom of the screen. */}
+      {!booked && pricingOptions.length > 0 && (
+        <div className="mbook">
+          <div>
+            <div className="mbook-p">
+              From <b>{fmt(fromPrice(v!.pricingOptions, v!.basePrice))}</b>
+            </div>
+            <div className="mbook-s">Hold your date with a deposit</div>
+          </div>
+          <a href="#book" className="btn-fill">
+            Check dates
+          </a>
+        </div>
+      )}
     </>
   );
 }

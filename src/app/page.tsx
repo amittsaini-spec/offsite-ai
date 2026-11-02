@@ -262,7 +262,7 @@ export default async function Home() {
                 See all →
               </Link>
             </div>
-            <div className="grid">
+            <div className="grid rail">
               {matches.map((v) => (
                 <VenueCard key={v.id} v={v} />
               ))}
@@ -282,7 +282,7 @@ export default async function Home() {
             View all →
           </Link>
         </div>
-        <div className="grid">
+        <div className="grid rail">
           {visibleCollections.map((c) => {
             // Gradient fallback prefers the linked venue type's gradient, then
             // a sand-emerald default so tag-linked cards still look like ours.

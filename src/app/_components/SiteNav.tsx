@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NavMenu from "./NavMenu";
 
 export default function SiteNav() {
   return (
@@ -21,6 +22,7 @@ export default function SiteNav() {
         <Link href="/venues" className="btn-fill">
           Find a venue
         </Link>
+        <NavMenu />
       </div>
     </nav>
   );

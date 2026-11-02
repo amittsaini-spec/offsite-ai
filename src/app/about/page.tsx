@@ -227,7 +227,7 @@ export default async function About() {
               See all venues →
             </Link>
           </div>
-          <div className="grid">
+          <div className="grid ab-resorts">
             {featured.map((r) => (
               <div className="ab-resort" key={r.id}>
                 <div
