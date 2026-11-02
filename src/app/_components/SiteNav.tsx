@@ -12,6 +12,9 @@ export default function SiteNav() {
         <Link href="/venues" className="nav-link">
           Browse venues
         </Link>
+        <Link href="/about" className="nav-link">
+          About
+        </Link>
         <Link href="/login" className="btn-ghost">
           Team login
         </Link>

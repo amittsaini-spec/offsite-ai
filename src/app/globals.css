@@ -393,6 +393,41 @@ input,select,textarea{ font-family:inherit; }
 .band .btn-fill{ margin-top:26px; }
 .foot{ max-width:var(--content-max); margin:70px auto 0; padding:34px var(--gutter) 50px; border-top:1px solid var(--line); display:flex; justify-content:space-between; color:var(--muted); font-size:13.5px; flex-wrap:wrap; gap:10px; }
 
+/* about page */
+.ab-hero{ max-width:var(--content-max); margin:0 auto; padding:62px var(--gutter) 0; display:grid;
+  grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+.ab-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:30px; }
+.ab-mosaic{ display:grid; grid-template-columns:1.25fr 1fr; grid-template-rows:1fr 1fr; gap:11px; height:460px;
+  border-radius:20px; overflow:hidden; }
+.ab-mosaic>div:first-child{ grid-row:span 2; }
+.ab-stats{ max-width:var(--content-max); margin:56px auto 0; padding:0 var(--gutter); display:grid;
+  grid-template-columns:repeat(4,1fr); gap:18px; }
+.ab-story{ display:grid; grid-template-columns:1fr 1.5fr; gap:48px; align-items:start; padding-top:56px;
+  border-top:1px solid var(--line); margin-top:64px; }
+.ab-story h2{ font-family:'Fraunces',serif; font-weight:500; font-size:38px; letter-spacing:-.02em; line-height:1.05; }
+.ab-story p{ font-size:17px; color:var(--ink-2); max-width:60ch; }
+.ab-story p+p{ margin-top:16px; }
+.ab-sides{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+.ab-side{ background:var(--white); border:1px solid var(--line); border-radius:18px; padding:30px 32px;
+  display:flex; flex-direction:column; }
+.ab-side h3{ font-family:'Fraunces',serif; font-weight:500; font-size:26px; letter-spacing:-.01em; margin-top:6px; }
+.ab-side ul{ list-style:none; display:grid; gap:12px; margin:18px 0 24px; }
+.ab-side li{ display:flex; gap:10px; font-size:15px; color:var(--ink-2); }
+.ab-side .ck{ color:var(--emerald); font-weight:700; }
+.ab-side .see{ margin-top:auto; }
+.ab-resort{ background:var(--white); border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+.ab-resort .cmedia{ height:170px; }
+.ab-resort .cname{ margin-top:0; }
+.ab-more{ margin-top:22px; font-size:14.5px; color:var(--ink-2); }
+.ab-more b{ color:var(--ink); font-weight:600; }
+@media(max-width:920px){
+  .ab-hero{ grid-template-columns:1fr; gap:34px; padding-top:44px; }
+  .ab-mosaic{ height:320px; }
+  .ab-stats{ grid-template-columns:repeat(2,1fr); }
+  .ab-story{ grid-template-columns:1fr; gap:18px; }
+  .ab-sides{ grid-template-columns:1fr; }
+}
+
 /* ---------- AUTH + ADMIN ---------- */
 .auth{ min-height:100vh; display:grid; place-items:center; padding:24px; }
 .authcard{ width:100%; max-width:400px; background:var(--white); border:1px solid var(--line); border-radius:22px; padding:38px; box-shadow:var(--shadow); }
